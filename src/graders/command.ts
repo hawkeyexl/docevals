@@ -1,0 +1,89 @@
+/**
+ * Command grader: runs a user-supplied (or docevals-generated) CLI command per
+ * page. Exit code membership in `successExitCodes` (default [0]) decides
+ * pass/fail; the output tail becomes the finding message.
+ *
+ * Working directory: page-sourced commands run from the page's directory (so
+ * generated script paths like "docevals/page.eval.mjs" resolve naturally);
+ * config-sourced commands run from the config file's directory.
+ */
+import { dirname } from "node:path";
+import type { Finding } from "../types.js";
+import { outputTail } from "./exec.js";
+import type { Grader, GraderContext, GraderTarget } from "./types.js";
+
+function substitute(cmd: string[], file: string): string[] {
+  return cmd.map((part) => part.replaceAll("{file}", file));
+}
+
+async function gradeOne(
+  ctx: GraderContext,
+  target: GraderTarget,
+): Promise<Finding[]> {
+  const { plan, eval: ev } = target;
+  if (!ev.command) {
+    return [
+      {
+        evalName: ev.name,
+        file: plan.page.file,
+        message:
+          "No command to run (script not yet generated — run `docevals generate` or `docevals run` with a provider configured)",
+        severity: ev.severity,
+      },
+    ];
+  }
+  const cwd =
+    ev.source === "page" ? dirname(plan.page.absPath) : ctx.config.configDir;
+  const result = await ctx.exec(substitute(ev.command, plan.page.absPath), {
+    cwd,
+    timeoutMs: ev.timeoutMs ?? ctx.config.scripts.timeoutMs,
+    env: { DOCEVALS_FILE: plan.page.absPath },
+  });
+
+  if (result.spawnError) {
+    return [
+      {
+        evalName: ev.name,
+        file: plan.page.file,
+        message: `Failed to run command "${ev.command[0]}": ${result.spawnError}`,
+        severity: ev.severity,
+      },
+    ];
+  }
+  if (result.timedOut) {
+    return [
+      {
+        evalName: ev.name,
+        file: plan.page.file,
+        message: `Command timed out after ${ev.timeoutMs ?? ctx.config.scripts.timeoutMs}ms`,
+        severity: ev.severity,
+      },
+    ];
+  }
+  if (result.code != null && ev.successExitCodes.includes(result.code)) {
+    return [];
+  }
+  const tail = outputTail(result);
+  return [
+    {
+      evalName: ev.name,
+      file: plan.page.file,
+      message: tail
+        ? `Exit code ${result.code}: ${tail}`
+        : `Exit code ${result.code}`,
+      severity: ev.severity,
+    },
+  ];
+}
+
+export const commandGrader: Grader = {
+  kind: "command",
+  mode: "per-file",
+  async grade(ctx) {
+    const findings: Finding[] = [];
+    for (const target of ctx.targets) {
+      findings.push(...(await gradeOne(ctx, target)));
+    }
+    return findings;
+  },
+};
