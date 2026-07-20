@@ -1,0 +1,68 @@
+/** Markdown reporter: PR-comment-friendly summary. */
+import type { EngineReport } from "../core/engine.js";
+
+const OUTCOME_ICON: Record<string, string> = {
+  pass: "✅",
+  fail: "❌",
+  "needs-review": "🟡",
+  skipped: "⏭️",
+  error: "🛑",
+};
+
+export function renderMarkdown(report: EngineReport): string {
+  const lines: string[] = ["## docevals results", ""];
+
+  lines.push("| Suite | Passed | Failed | Review | Pass rate | Target | |");
+  lines.push("|---|---|---|---|---|---|---|");
+  for (const s of report.suites) {
+    lines.push(
+      `| ${s.suite} | ${s.passed} | ${s.failed + s.errored} | ${s.needsReview} | ` +
+        `${(s.passRate * 100).toFixed(0)}% | ${(s.targetPassRate * 100).toFixed(0)}% | ` +
+        `${s.meetsTarget ? "✅" : "❌"} |`,
+    );
+  }
+
+  const notable = report.evalResults.filter(
+    (r) => r.outcome === "fail" || r.outcome === "error" || r.outcome === "needs-review",
+  );
+  if (notable.length > 0) {
+    lines.push("", "### Findings", "");
+    for (const r of notable) {
+      const icon = OUTCOME_ICON[r.outcome] ?? "";
+      lines.push(`- ${icon} **${r.evalName}** — \`${r.file}\``);
+      for (const f of r.findings ?? []) {
+        const loc = f.line != null ? `:${f.line}` : "";
+        lines.push(`  - ${f.severity}${loc}: ${f.message}`);
+      }
+      if (r.consensus) {
+        const v = r.consensus;
+        const reasoning = v.runs.find((run) => run.verdict)?.verdict?.reasoning;
+        lines.push(
+          `  - votes pass:${v.votes.pass} fail:${v.votes.fail} partial:${v.votes.partial}, confidence ${v.meanConfidence.toFixed(2)} (${v.zone})`,
+        );
+        if (reasoning) lines.push(`  - ${reasoning}`);
+      }
+      if (r.skipReason && r.outcome === "error") lines.push(`  - ${r.skipReason}`);
+    }
+  }
+
+  for (const p of report.problems) {
+    lines.push(`- ⚠️ \`${p.file}\`${p.line != null ? `:${p.line}` : ""} ${p.message}`);
+  }
+
+  if (report.generated.length > 0) {
+    lines.push("", "### Generated scripts", "");
+    for (const g of report.generated) lines.push(`- \`${g}\``);
+  }
+
+  if (report.cost.judgedEvals > 0) {
+    lines.push(
+      "",
+      `_Judged ${report.cost.judgedEvals} evals (${report.cost.cachedEvals} cached), ` +
+        `${report.cost.totalTokens.toLocaleString()} tokens` +
+        (report.cost.totalUsd > 0 ? `, ~$${report.cost.totalUsd.toFixed(4)}` : "") +
+        `._`,
+    );
+  }
+  return lines.join("\n");
+}

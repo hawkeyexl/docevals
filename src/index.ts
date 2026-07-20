@@ -35,6 +35,15 @@ export type { GenerateOptions, GenerateRun } from "./commands/generate.js";
 export { runPromote } from "./commands/promote.js";
 export type { PromoteOptions, PromoteProposal } from "./commands/promote.js";
 export { makeGenerateScripts, scriptLocationFor } from "./graders/scriptgen.js";
+export { runCalibrate, renderCalibration, loadGoldenCases } from "./commands/calibrate.js";
+export type {
+  CalibrateOptions,
+  CalibrationReport,
+  GoldenCase,
+} from "./commands/calibrate.js";
+export { runInit } from "./commands/init.js";
+export { registerGrader, graderFor, listGraderKinds } from "./graders/registry.js";
+export type { Grader, GraderContext, GraderTarget, ExecFn } from "./graders/types.js";
 export {
   updatePageEval,
   updateConfigEval,

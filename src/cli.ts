@@ -10,6 +10,8 @@ import { runRun } from "./commands/run.js";
 import { runGenerate } from "./commands/generate.js";
 import { runPromote } from "./commands/promote.js";
 import { listReviews, renderReviews, runReview } from "./commands/review.js";
+import { runCalibrate, renderCalibration } from "./commands/calibrate.js";
+import { runInit } from "./commands/init.js";
 import { render, type ReportFormat } from "./reporters/index.js";
 
 const pkg = JSON.parse(
@@ -170,6 +172,54 @@ program
       }
     },
   );
+
+program
+  .command("calibrate")
+  .description(
+    "Measure judge agreement against a human-verified golden set (.docevals/golden/*.yaml)",
+  )
+  .option("-c, --config <path>", "Path to docevals.config.yaml")
+  .option("--golden <dir>", "Golden set directory", ".docevals/golden")
+  .option("--provider <name>", "Provider: anthropic | openai | claude-cli")
+  .option("--model <model>", "Model override")
+  .option("--runs <n>", "Ensemble runs per case", (v) => Number.parseInt(v, 10))
+  .option("--no-cache", "Bypass the judge response cache")
+  .action(
+    async (opts: {
+      config?: string;
+      golden?: string;
+      provider?: string;
+      model?: string;
+      runs?: number;
+      cache?: boolean;
+    }) => {
+      try {
+        const report = await runCalibrate({
+          config: opts.config,
+          golden: opts.golden,
+          provider: opts.provider,
+          model: opts.model,
+          runs: opts.runs,
+          noCache: opts.cache === false,
+        });
+        console.log(renderCalibration(report));
+        process.exitCode = report.meetsThreshold ? 0 : 1;
+      } catch (e) {
+        fail(e);
+      }
+    },
+  );
+
+program
+  .command("init")
+  .description("Create a starter docevals.config.yaml in the current directory")
+  .action(() => {
+    try {
+      console.log(`Created ${runInit()}`);
+    } catch (e) {
+      fail(e);
+    }
+  });
 
 program
   .command("review")

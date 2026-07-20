@@ -6,16 +6,24 @@ import type { Grader } from "./types.js";
 import { commandGrader } from "./command.js";
 import { markdownlintGrader } from "./tools/markdownlint.js";
 import { docmetaGrader } from "./tools/docmeta.js";
+import { valeGrader } from "./tools/vale.js";
+import { docStructureLintGrader } from "./tools/doc-structure-lint.js";
+import { docDetectiveGrader } from "./tools/doc-detective.js";
 import { freshnessGrader } from "./native/freshness.js";
 import { readingLevelGrader } from "./native/reading-level.js";
+import { differentiationGrader } from "./native/differentiation.js";
 
 const GRADERS = new Map<string, Grader>(
   [
     commandGrader,
     markdownlintGrader,
     docmetaGrader,
+    valeGrader,
+    docStructureLintGrader,
+    docDetectiveGrader,
     freshnessGrader,
     readingLevelGrader,
+    differentiationGrader,
   ].map((g) => [g.kind, g]),
 );
 

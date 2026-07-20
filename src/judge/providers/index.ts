@@ -4,6 +4,8 @@ import type { DocevalsConfig, ProviderName } from "../../core/config.js";
 import type { JudgeOptions } from "../../core/engine.js";
 import type { JudgeProvider } from "../types.js";
 import { AnthropicProvider } from "./anthropic.js";
+import { OpenAICompatProvider } from "./openai-compat.js";
+import { ClaudeCliProvider } from "./claude-cli.js";
 
 export function makeProvider(
   config: DocevalsConfig,
@@ -17,10 +19,15 @@ export function makeProvider(
         config.provider.anthropic.apiKeyEnv,
       );
     case "openai":
+      return new OpenAICompatProvider(
+        config.provider.openai.baseUrl,
+        options.model ?? config.provider.openai.model,
+        config.provider.openai.apiKeyEnv,
+      );
     case "claude-cli":
-      // Implemented in a later phase.
-      throw new DocevalsError(
-        `Provider "${name}" is not available yet — use anthropic`,
+      return new ClaudeCliProvider(
+        options.model ?? config.provider["claude-cli"].model,
+        config.provider["claude-cli"].command,
       );
     default:
       throw new DocevalsError(`Unknown provider "${String(name)}"`);

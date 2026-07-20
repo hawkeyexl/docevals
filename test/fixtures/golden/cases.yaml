@@ -1,0 +1,18 @@
+# Golden set for judge calibration over the fixture corpus.
+# Each case is a human-verified verdict: what a careful reviewer decided.
+- file: test/fixtures/pages/docs/get-started/concepts.md
+  eval: defines-core-terms
+  expected: pass
+  rationale: Test specification, test, and step each have a heading and definition, with relationships stated.
+- file: test/fixtures/pages/docs/get-started/installation.mdx
+  eval: install-command-accuracy
+  expected: pass
+  rationale: Shows `npm i -g doc-detective` and Node.js v22 or later.
+- file: test/fixtures/pages/docs/get-started/installation.mdx
+  eval: no-future-promises
+  expected: pass
+  rationale: The @next dist-tag mention describes an available install path, not an unreleased promise.
+- file: test/fixtures/pages/tutorials/capture-screenshot.mdx
+  eval: explains-why-before-how
+  expected: pass
+  rationale: Opens with what the tutorial accomplishes before the steps.

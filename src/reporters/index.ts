@@ -2,6 +2,8 @@
 import type { EngineReport } from "../core/engine.js";
 import { renderHuman } from "./human.js";
 import { renderJson } from "./json.js";
+import { renderMarkdown } from "./markdown.js";
+import { renderGithub } from "./github.js";
 
 export type ReportFormat = "human" | "json" | "markdown" | "github";
 
@@ -12,8 +14,8 @@ export function render(report: EngineReport, format: ReportFormat): string {
     case "json":
       return renderJson(report);
     case "markdown":
+      return renderMarkdown(report);
     case "github":
-      // Implemented in a later phase; fall back to JSON for now.
-      return renderJson(report);
+      return renderGithub(report);
   }
 }
