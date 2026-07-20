@@ -7,6 +7,8 @@ import pc from "picocolors";
 import { DocevalsError } from "./types.js";
 import { runList, renderList } from "./commands/list.js";
 import { runRun } from "./commands/run.js";
+import { runGenerate } from "./commands/generate.js";
+import { runPromote } from "./commands/promote.js";
 import { listReviews, renderReviews, runReview } from "./commands/review.js";
 import { render, type ReportFormat } from "./reporters/index.js";
 
@@ -95,6 +97,79 @@ program
       fail(e);
     }
   });
+
+program
+  .command("generate")
+  .description(
+    "Generate check scripts for command evals with a plain-language assertion but no command",
+  )
+  .argument("[globs...]", "File globs (default: config files.include)")
+  .option("-c, --config <path>", "Path to docevals.config.yaml")
+  .option("--provider <name>", "Provider: anthropic | openai | claude-cli")
+  .option("--model <model>", "Model override")
+  .action(
+    async (
+      globs: string[],
+      opts: { config?: string; provider?: string; model?: string },
+    ) => {
+      try {
+        const result = await runGenerate(globs, opts);
+        if (result.targets === 0) {
+          console.log("Nothing to generate — every command eval has a command.");
+          return;
+        }
+        console.log(
+          `Generated ${result.generatedPaths.length}/${result.targets} check script(s):`,
+        );
+        for (const p of result.generatedPaths) console.log(`  ${p}`);
+        if (result.generatedPaths.length < result.targets) {
+          process.exitCode = 1;
+        }
+      } catch (e) {
+        fail(e);
+      }
+    },
+  );
+
+program
+  .command("promote")
+  .description(
+    "Find llm-graded evals expressible as deterministic checks; --write converts them",
+  )
+  .argument("[globs...]", "File globs (default: config files.include)")
+  .option("-c, --config <path>", "Path to docevals.config.yaml")
+  .option("--write", "Apply promotions (write scripts and rewrite evals)")
+  .option("--provider <name>", "Provider: anthropic | openai | claude-cli")
+  .option("--model <model>", "Model override")
+  .action(
+    async (
+      globs: string[],
+      opts: { config?: string; write?: boolean; provider?: string; model?: string },
+    ) => {
+      try {
+        const proposals = await runPromote(globs, opts);
+        if (proposals.length === 0) {
+          console.log("No llm-graded evals found.");
+          return;
+        }
+        for (const p of proposals) {
+          const tag = p.promotable
+            ? p.applied
+              ? pc.green("promoted")
+              : pc.cyan("promotable")
+            : pc.dim("keep-llm");
+          const script = p.scriptPath ? pc.dim(` -> ${p.scriptPath}`) : "";
+          console.log(`${tag} ${p.evalName} (${p.source}, ${p.file})${script}`);
+          console.log(pc.dim(`  ${p.rationale}`));
+        }
+        if (!opts.write && proposals.some((p) => p.promotable)) {
+          console.log(pc.cyan("\nRe-run with --write to apply promotions."));
+        }
+      } catch (e) {
+        fail(e);
+      }
+    },
+  );
 
 program
   .command("review")

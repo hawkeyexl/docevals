@@ -8,6 +8,8 @@ import { loadConfig } from "../core/config.js";
 import { render, type ReportFormat } from "../reporters/index.js";
 import { makeJudge } from "../judge/judge.js";
 import { makeProvider } from "../judge/providers/index.js";
+import { makeGenerateScripts } from "../graders/scriptgen.js";
+import type { GenerateFn } from "../core/engine.js";
 import { DocevalsError } from "../types.js";
 
 export interface RunCommandOptions {
@@ -40,23 +42,31 @@ export async function runRun(
     maxCostUsd: options.maxCost ?? null,
   };
 
-  // Build the judge stage unless deterministic-only or an override supplies one.
+  // Build the judge and generation stages unless deterministic-only or an
+  // override supplies them. Both share one provider.
   let judge: JudgeFn | undefined;
-  if (!options.deterministicOnly && !("judge" in engineOverrides)) {
+  let generateScripts: GenerateFn | undefined;
+  if (!("judge" in engineOverrides) || !("generateScripts" in engineOverrides)) {
     try {
       const config = loadConfig(options.config, cwd);
       const provider = makeProvider(config, judgeOptions);
-      judge = makeJudge({ provider, root: cwd });
+      if (!options.deterministicOnly) judge = makeJudge({ provider, root: cwd });
+      if (options.generate !== false) {
+        generateScripts = makeGenerateScripts({ provider, root: cwd });
+      }
     } catch (e) {
       if (options.llmOnly || !(e instanceof DocevalsError)) throw e;
-      console.warn(
-        `docevals: judge unavailable — ${e.message}. Running deterministic evals only.`,
-      );
+      if (!options.deterministicOnly || options.generate === true) {
+        console.warn(
+          `docevals: provider unavailable — ${e.message}. Running deterministic evals only.`,
+        );
+      }
     }
   }
 
   return runEvals({
     judge,
+    generateScripts,
     configPath: options.config,
     globs,
     cwd: options.cwd,

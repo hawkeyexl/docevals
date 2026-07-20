@@ -30,4 +30,13 @@ export {
   renderReviews,
   runReview,
 } from "./commands/review.js";
+export { runGenerate } from "./commands/generate.js";
+export type { GenerateOptions, GenerateRun } from "./commands/generate.js";
+export { runPromote } from "./commands/promote.js";
+export type { PromoteOptions, PromoteProposal } from "./commands/promote.js";
+export { makeGenerateScripts, scriptLocationFor } from "./graders/scriptgen.js";
+export {
+  updatePageEval,
+  updateConfigEval,
+} from "./core/frontmatter-edit.js";
 export * from "./types.js";
