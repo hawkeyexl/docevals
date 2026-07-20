@@ -1,0 +1,181 @@
+/**
+ * The ensemble judge: N independent runs per (page, eval), each a fresh
+ * request with no shared context (eval isolation), aggregated by consensus
+ * and routed through confidence zones. Persisted human reviews resolve
+ * needs-review outcomes for unchanged pages.
+ */
+import { Ajv2020 } from "ajv/dist/2020.js";
+import verdictSchema from "./verdict-schema.json" with { type: "json" };
+import type { EvalResult, JudgeRun, JudgeVerdict } from "../types.js";
+import type { DocevalsConfig } from "../core/config.js";
+import type { JudgeFn, JudgeOptions } from "../core/engine.js";
+import type { GraderTarget } from "../graders/types.js";
+import { computeConsensus } from "../core/consensus.js";
+import { zoneFor } from "../core/zones.js";
+import { findReview, loadReviews } from "../core/reviews.js";
+import { JudgeCache, cacheKey } from "./cache.js";
+import { costOfRuns, pricingFor } from "./cost.js";
+import { JUDGE_SYSTEM_PROMPT, buildUserContent } from "./prompt.js";
+import type { JudgeProvider } from "./types.js";
+import { resolve as resolvePath } from "node:path";
+
+const ajv = new Ajv2020({ allErrors: true });
+const validateVerdict = ajv.compile(verdictSchema);
+
+async function singleRun(
+  provider: JudgeProvider,
+  system: string,
+  user: string,
+  temperature: number,
+): Promise<JudgeRun> {
+  const start = Date.now();
+  const base = {
+    provider: provider.provider(),
+    model: provider.modelName(),
+    cached: false,
+  };
+  // One retry on invalid JSON, then the run records as an error. An errored
+  // run counts against consensus — it can never produce a silent pass.
+  let lastError = "unknown error";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await provider.completeJSON({
+        system,
+        user,
+        schema: verdictSchema as Record<string, unknown>,
+        temperature,
+      });
+      if (validateVerdict(response.json)) {
+        return {
+          ...base,
+          verdict: response.json as unknown as JudgeVerdict,
+          usage: response.usage,
+          durationMs: Date.now() - start,
+        };
+      }
+      lastError = `Verdict failed schema validation: ${(validateVerdict.errors ?? [])
+        .map((e) => `${e.instancePath} ${e.message}`)
+        .join("; ")}`;
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : String(e);
+    }
+  }
+  return { ...base, error: lastError, durationMs: Date.now() - start };
+}
+
+export interface JudgeStageDeps {
+  provider: JudgeProvider;
+  root: string;
+}
+
+/** Build the engine's judge stage around a concrete provider. */
+export function makeJudge(deps: JudgeStageDeps): JudgeFn {
+  return async (
+    targets: GraderTarget[],
+    config: DocevalsConfig,
+    options: JudgeOptions,
+  ): Promise<EvalResult[]> => {
+    const { provider, root } = deps;
+    const runsPerEval = options.runs ?? config.judge.ensembleRuns;
+    const temperature = config.judge.temperature;
+    if (temperature > 0) {
+      console.warn(
+        `docevals: judge.temperature is ${temperature} — nonzero temperature adds noise to verdicts; 0 is strongly recommended.`,
+      );
+    }
+    const cache = new JudgeCache(
+      resolvePath(root, config.judge.cacheDir),
+      options.noCache !== true,
+    );
+    const providerKey = provider.provider() as "anthropic" | "openai";
+    const pricing = pricingFor(
+      provider.modelName(),
+      config.provider[providerKey]?.pricing,
+    );
+    const reviews = loadReviews(root);
+    const maxCostUsd = options.maxCostUsd ?? config.judge.maxCostUsd;
+    let spentUsd = 0;
+
+    const results: EvalResult[] = [];
+    const concurrency = config.defaults.concurrency;
+    let index = 0;
+
+    const judgeTarget = async (target: GraderTarget): Promise<EvalResult> => {
+      const { plan, eval: ev } = target;
+      const start = Date.now();
+      if (maxCostUsd != null && spentUsd >= maxCostUsd) {
+        return {
+          evalName: ev.name,
+          type: ev.type,
+          grader: ev.grader,
+          file: plan.page.file,
+          outcome: "skipped",
+          skipReason: `judge cost budget exhausted ($${maxCostUsd})`,
+          durationMs: 0,
+        };
+      }
+
+      const key = cacheKey(
+        provider.provider(),
+        provider.modelName(),
+        runsPerEval,
+        plan.page.body,
+        ev,
+      );
+      let runs = cache.get(key);
+      if (!runs) {
+        const user = buildUserContent(ev, plan.page.body);
+        runs = [];
+        for (let i = 0; i < runsPerEval; i++) {
+          runs.push(
+            await singleRun(provider, JUDGE_SYSTEM_PROMPT, user, temperature),
+          );
+        }
+        cache.set(key, runs);
+      }
+
+      const consensusBase = computeConsensus(runs);
+      const zone = zoneFor(consensusBase, config.judge.zones);
+      const consensus = { ...consensusBase, zone };
+      const costUsd = costOfRuns(runs, pricing);
+      spentUsd += costUsd;
+
+      let outcome: EvalResult["outcome"] =
+        zone === "auto-pass" ? "pass" : zone === "auto-fail" ? "fail" : "needs-review";
+      let via: EvalResult["via"];
+      if (outcome === "needs-review") {
+        const review = findReview(reviews, plan.page.file, ev.name, plan.page.body);
+        if (review) {
+          outcome = review.verdict;
+          via = "human-review";
+        }
+      }
+
+      return {
+        evalName: ev.name,
+        type: ev.type,
+        grader: ev.grader,
+        file: plan.page.file,
+        outcome,
+        consensus,
+        via,
+        costUsd,
+        durationMs: Date.now() - start,
+      };
+    };
+
+    // Simple bounded-concurrency pool across targets; runs within one eval
+    // stay sequential (independent requests, no shared context).
+    const workers = Array.from(
+      { length: Math.min(concurrency, targets.length) },
+      async () => {
+        while (index < targets.length) {
+          const i = index++;
+          results[i] = await judgeTarget(targets[i]!);
+        }
+      },
+    );
+    await Promise.all(workers);
+    return results;
+  };
+}

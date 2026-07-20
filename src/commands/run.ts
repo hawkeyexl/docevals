@@ -3,8 +3,12 @@
  * first (cheap-first ordering); the LLM judge stage runs when a provider is
  * available and not disabled.
  */
-import { runEvals, type EngineReport, type RunOptions } from "../core/engine.js";
+import { runEvals, type EngineReport, type JudgeFn, type RunOptions } from "../core/engine.js";
+import { loadConfig } from "../core/config.js";
 import { render, type ReportFormat } from "../reporters/index.js";
+import { makeJudge } from "../judge/judge.js";
+import { makeProvider } from "../judge/providers/index.js";
+import { DocevalsError } from "../types.js";
 
 export interface RunCommandOptions {
   config?: string;
@@ -27,7 +31,32 @@ export async function runRun(
   options: RunCommandOptions = {},
   engineOverrides: Partial<RunOptions> = {},
 ): Promise<EngineReport> {
+  const cwd = options.cwd ?? process.cwd();
+  const judgeOptions = {
+    provider: options.provider,
+    model: options.model,
+    runs: options.runs,
+    noCache: options.cache === false,
+    maxCostUsd: options.maxCost ?? null,
+  };
+
+  // Build the judge stage unless deterministic-only or an override supplies one.
+  let judge: JudgeFn | undefined;
+  if (!options.deterministicOnly && !("judge" in engineOverrides)) {
+    try {
+      const config = loadConfig(options.config, cwd);
+      const provider = makeProvider(config, judgeOptions);
+      judge = makeJudge({ provider, root: cwd });
+    } catch (e) {
+      if (options.llmOnly || !(e instanceof DocevalsError)) throw e;
+      console.warn(
+        `docevals: judge unavailable — ${e.message}. Running deterministic evals only.`,
+      );
+    }
+  }
+
   return runEvals({
+    judge,
     configPath: options.config,
     globs,
     cwd: options.cwd,
@@ -36,13 +65,7 @@ export async function runRun(
     frontmatterCommands: options.frontmatterCommands,
     generate: options.generate,
     failOnReview: options.failOnReview,
-    judgeOptions: {
-      provider: options.provider,
-      model: options.model,
-      runs: options.runs,
-      noCache: options.cache === false,
-      maxCostUsd: options.maxCost ?? null,
-    },
+    judgeOptions,
     ...engineOverrides,
   });
 }

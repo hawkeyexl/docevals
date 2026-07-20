@@ -7,6 +7,7 @@ import pc from "picocolors";
 import { DocevalsError } from "./types.js";
 import { runList, renderList } from "./commands/list.js";
 import { runRun } from "./commands/run.js";
+import { listReviews, renderReviews, runReview } from "./commands/review.js";
 import { render, type ReportFormat } from "./reporters/index.js";
 
 const pkg = JSON.parse(
@@ -94,5 +95,42 @@ program
       fail(e);
     }
   });
+
+program
+  .command("review")
+  .description(
+    "Record a human verdict for an eval in the human-review zone (or list recorded reviews)",
+  )
+  .argument("[file]", "Page path")
+  .argument("[eval]", "Eval name")
+  .argument("[verdict]", "pass | fail")
+  .option("--reviewer <name>", "Reviewer name recorded with the verdict")
+  .option("--note <text>", "Optional note")
+  .action(
+    (
+      file: string | undefined,
+      evalName: string | undefined,
+      verdict: string | undefined,
+      opts: { reviewer?: string; note?: string },
+    ) => {
+      try {
+        if (!file) {
+          console.log(renderReviews(listReviews()));
+          return;
+        }
+        if (!evalName || !verdict) {
+          throw new DocevalsError(
+            "Usage: docevals review <file> <eval> <pass|fail>",
+          );
+        }
+        const entry = runReview(file, evalName, verdict, opts);
+        console.log(
+          `Recorded ${entry.verdict} for ${entry.evalName} on ${entry.file}`,
+        );
+      } catch (e) {
+        fail(e);
+      }
+    },
+  );
 
 program.parse();
