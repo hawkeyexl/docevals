@@ -58,7 +58,7 @@ evals:
     assertion: Page frontmatter validates against the docevals built-in schema.
     grader: tool:docmeta
     options:
-      args: ["--schema", "docevals:frontmatter:0.1"]
+      schemas: ["docevals:frontmatter:0.1"]
     severity: error
   markdownlint:
     assertion: Page passes markdownlint style rules.
@@ -90,7 +90,7 @@ evals:
 suites:
   reference:
     targetPassRate: 1.0
-    evals: [no-future-promises, fresh-enough, readable]
+    evals: [no-future-promises, fresh-enough, readable, frontmatter-valid]
   tutorial:
     targetPassRate: 0.7
     evals: [explains-why-before-how, no-future-promises]
