@@ -214,12 +214,17 @@ These conventions are ported and binding, but the automation that enforces them 
 | ADRs | No `adrs/` directory yet |
 | Docs impact | No docs site; the README is the only user-facing surface |
 
-CI that *does* exist: `.github/workflows/ci.yml` (typecheck, build, test, and a dogfood gate on ubuntu + windows) and `.github/workflows/claude-pr-review.yml` (skips cleanly until `CLAUDE_CODE_OAUTH_TOKEN` is set on the repo).
+CI that *does* exist: `.github/workflows/ci.yml` (typecheck, build, test, and a dogfood gate on ubuntu + windows), plus the two Claude workflows — `claude-pr-review.yml` (reviews every PR) and `claude.yml` (responds to `@claude` from trusted authors). Both skip cleanly until the repo has a token:
+
+```bash
+gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo hawkeyexl/docevals
+```
 
 ## Related files
 
 - [.github/workflows/ci.yml](.github/workflows/ci.yml) — build/test matrix and the dogfood gate
-- [.github/workflows/claude-pr-review.yml](.github/workflows/claude-pr-review.yml) — automated PR review
+- [.github/workflows/claude-pr-review.yml](.github/workflows/claude-pr-review.yml) — automatic review on every PR
+- [.github/workflows/claude.yml](.github/workflows/claude.yml) — interactive `@claude` in issues, PR comments, and reviews (trusted authors only)
 - [docevals.config.yaml](docevals.config.yaml) — the repo's own dogfood config
 - [schemas/frontmatter-0.1.json](schemas/frontmatter-0.1.json) — the published frontmatter schema
 - [src/core/config-schema.json](src/core/config-schema.json) — config file contract
