@@ -233,6 +233,8 @@ Two workflows are inert until configured, by design — both would otherwise fai
   gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo hawkeyexl/docevals
   ```
 
+  Even with the token set, `claude-code-action` **refuses to run when the workflow file differs from the copy on the default branch** ("Skipping action due to workflow validation"). That is an anti-tampering guard — otherwise a PR could rewrite the review workflow and run the modified version with repo credentials. Consequences worth knowing: a PR that *introduces or edits* a Claude workflow never gets reviewed by it, and the change only takes effect once merged to `main`. The job still reports success, so a green `review` check does not by itself mean a review happened — check the duration (a real review takes minutes, a skip takes seconds).
+
 - **Releases** are opt-in. docevals has never been published and a first npm publish cannot be undone, so `release.yml` runs only when a repository variable says to:
 
   ```bash
