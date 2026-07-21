@@ -1,6 +1,8 @@
 /**
  * Process execution wrapper. Uses cross-spawn so npm shims (`markdownlint.cmd`,
  * `vale.cmd`) resolve on Windows without `shell: true` and its quoting hazards.
+ * Large payloads go through `input` (piped stdin) rather than argv — Windows
+ * caps the command line at ~32K characters.
  */
 import spawn from "cross-spawn";
 import type { ExecFn, ExecResult } from "./types.js";
@@ -20,7 +22,7 @@ export const realExec: ExecFn = (cmd, opts = {}) => {
     const child = spawn(bin, args, {
       cwd: opts.cwd,
       env: { ...process.env, ...(opts.env ?? {}) },
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: [opts.input != null ? "pipe" : "ignore", "pipe", "pipe"],
     });
 
     let stdout = "";
@@ -41,6 +43,11 @@ export const realExec: ExecFn = (cmd, opts = {}) => {
       resolvePromise(result);
     };
 
+    if (opts.input != null && child.stdin) {
+      // EPIPE from a child that exits before reading is not our failure.
+      child.stdin.on("error", () => {});
+      child.stdin.end(opts.input);
+    }
     child.stdout?.on("data", (d: Buffer) => (stdout += d.toString()));
     child.stderr?.on("data", (d: Buffer) => (stderr += d.toString()));
     child.on("error", (e) =>

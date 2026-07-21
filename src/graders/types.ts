@@ -22,10 +22,15 @@ export interface ExecResult {
   spawnError?: string;
 }
 
-export type ExecFn = (
-  cmd: string[],
-  opts?: { cwd?: string; timeoutMs?: number; env?: Record<string, string> },
-) => Promise<ExecResult>;
+export interface ExecOptions {
+  cwd?: string;
+  timeoutMs?: number;
+  env?: Record<string, string>;
+  /** Text piped to the child's stdin (stdin is closed after writing). */
+  input?: string;
+}
+
+export type ExecFn = (cmd: string[], opts?: ExecOptions) => Promise<ExecResult>;
 
 export interface GraderContext {
   targets: GraderTarget[];
@@ -45,4 +50,28 @@ export interface Grader {
    */
   mode: "batch" | "per-file" | "corpus";
   grade(ctx: GraderContext): Promise<Finding[]>;
+}
+
+/**
+ * Split targets into groups that share an eval configuration. Batch and
+ * corpus graders run one invocation per group so that (a) two same-kind evals
+ * on one page each get their own run and correct finding attribution, and
+ * (b) per-page option overrides are honored instead of the first target's
+ * options being applied to everyone.
+ */
+export function groupTargetsByEval(targets: GraderTarget[]): GraderTarget[][] {
+  const groups = new Map<string, GraderTarget[]>();
+  for (const t of targets) {
+    const key = JSON.stringify([
+      t.eval.name,
+      t.eval.options,
+      t.eval.timeoutMs ?? null,
+      t.eval.severity,
+      t.eval.severityMap ?? null,
+    ]);
+    const list = groups.get(key) ?? [];
+    list.push(t);
+    groups.set(key, list);
+  }
+  return [...groups.values()];
 }

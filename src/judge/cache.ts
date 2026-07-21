@@ -19,6 +19,7 @@ export function cacheKey(
   provider: string,
   model: string,
   runs: number,
+  temperature: number,
   body: string,
   ev: ResolvedEval,
 ): string {
@@ -29,7 +30,15 @@ export function cacheKey(
     type: ev.type,
   });
   return sha256(
-    [provider, model, `v${PROMPT_VERSION}`, `r${runs}`, sha256(body), sha256(evalFingerprint)].join("|"),
+    [
+      provider,
+      model,
+      `v${PROMPT_VERSION}`,
+      `r${runs}`,
+      `t${temperature}`,
+      sha256(body),
+      sha256(evalFingerprint),
+    ].join("|"),
   );
 }
 

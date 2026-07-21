@@ -38,6 +38,26 @@ function fail(e: unknown): never {
   throw e;
 }
 
+function parseIntArg(name: string) {
+  return (value: string): number => {
+    const n = Number.parseInt(value, 10);
+    if (Number.isNaN(n) || n < 1) {
+      fail(new DocevalsError(`${name} must be a positive integer, got "${value}"`));
+    }
+    return n;
+  };
+}
+
+function parseFloatArg(name: string) {
+  return (value: string): number => {
+    const n = Number.parseFloat(value);
+    if (Number.isNaN(n) || n < 0) {
+      fail(new DocevalsError(`${name} must be a non-negative number, got "${value}"`));
+    }
+    return n;
+  };
+}
+
 program
   .command("list")
   .description("Show the resolved eval plan per page without running anything")
@@ -75,8 +95,8 @@ program
   .option("--fail-on-review", "Exit 1 when any eval lands in the human-review zone")
   .option("--provider <name>", "Judge provider: anthropic | openai | claude-cli")
   .option("--model <model>", "Judge model override")
-  .option("--runs <n>", "Ensemble runs per eval", (v) => Number.parseInt(v, 10))
-  .option("--max-cost <usd>", "Abort judging past this cost", (v) => Number.parseFloat(v))
+  .option("--runs <n>", "Ensemble runs per eval", parseIntArg("--runs"))
+  .option("--max-cost <usd>", "Abort judging past this cost", parseFloatArg("--max-cost"))
   .action(async (globs: string[], opts: Record<string, unknown>) => {
     try {
       const report = await runRun(globs, {
@@ -182,7 +202,7 @@ program
   .option("--golden <dir>", "Golden set directory", ".docevals/golden")
   .option("--provider <name>", "Provider: anthropic | openai | claude-cli")
   .option("--model <model>", "Model override")
-  .option("--runs <n>", "Ensemble runs per case", (v) => Number.parseInt(v, 10))
+  .option("--runs <n>", "Ensemble runs per case", parseIntArg("--runs"))
   .option("--no-cache", "Bypass the judge response cache")
   .action(
     async (opts: {

@@ -190,17 +190,20 @@ export function makeGenerateScripts(deps: ScriptgenDeps): GenerateFn {
       }
 
       // Mutate the in-memory eval so this run executes the fresh script.
-      // Config-sourced evals may appear on several targets.
-      for (const t of targets) {
-        if (t.eval.name === ev.name && t.eval.source === ev.source) {
-          if (t.eval.source === "config") {
-            const loc = scriptLocationFor(t, config, deps.root);
-            t.eval.command = loc.command;
-          } else if (t === target) {
-            t.eval.command = location.command;
+      if (ev.source === "config") {
+        // A config-sourced eval appears once per page; every target shares
+        // the same central definition and script.
+        for (const t of targets) {
+          if (t.eval.name === ev.name && t.eval.source === "config") {
+            t.eval.command = scriptLocationFor(t, config, deps.root).command;
+            t.eval.generated = { assertionHash: updates.generated.assertionHash };
           }
-          t.eval.generated = { assertionHash: updates.generated.assertionHash };
         }
+      } else {
+        // Page-sourced evals are per-page: same-named inline evals on other
+        // pages have their own assertions and generate independently.
+        target.eval.command = location.command;
+        target.eval.generated = { assertionHash: updates.generated.assertionHash };
       }
     }
     return { generatedPaths };

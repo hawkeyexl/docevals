@@ -28,14 +28,36 @@ export const JUDGE_SYSTEM_PROMPT = [
   "Respond with a JSON object matching the provided schema.",
 ].join("\n");
 
-/** Strip MDX imports/exports and comments; keep JSX text content and markdown. */
+/**
+ * Strip MDX imports/exports and comments; keep JSX text content and markdown.
+ * Fence-aware: lines inside ``` / ~~~ code blocks are page content the judge
+ * must see verbatim (a code sample's `import` line is evidence, not MDX noise).
+ */
 export function cleanBody(body: string): string {
-  return body
-    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/^(import|export)\s.*$/gm, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  const out: string[] = [];
+  let fence: string | null = null;
+  for (const line of body.split("\n")) {
+    const open = /^(\s*)(```+|~~~+)/.exec(line);
+    if (fence) {
+      out.push(line);
+      if (open && open[2]!.startsWith(fence)) fence = null;
+      continue;
+    }
+    if (open) {
+      fence = open[2]!;
+      out.push(line);
+      continue;
+    }
+    out.push(
+      line
+        .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+        .replace(/<!--[\s\S]*?-->/g, "")
+        .replace(/^(import|export)\s.*$/, ""),
+    );
+  }
+  // Comments spanning multiple lines are left in place — stray comment text
+  // is harmless noise, whereas a post-join strip would reach into fences.
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
 export function buildUserContent(ev: ResolvedEval, body: string): string {

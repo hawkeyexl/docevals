@@ -4,7 +4,7 @@
  * available and not disabled.
  */
 import { runEvals, type EngineReport, type JudgeFn, type RunOptions } from "../core/engine.js";
-import { loadConfig } from "../core/config.js";
+import { loadConfig, type DocevalsConfig } from "../core/config.js";
 import { render, type ReportFormat } from "../reporters/index.js";
 import { makeJudge } from "../judge/judge.js";
 import { makeProvider } from "../judge/providers/index.js";
@@ -42,13 +42,16 @@ export async function runRun(
     maxCostUsd: options.maxCost ?? null,
   };
 
+  // Loaded once and passed through to the engine — a run must not validate
+  // the config twice or observe two different versions of it.
+  const config: DocevalsConfig = loadConfig(options.config, cwd);
+
   // Build the judge and generation stages unless deterministic-only or an
   // override supplies them. Both share one provider.
   let judge: JudgeFn | undefined;
   let generateScripts: GenerateFn | undefined;
   if (!("judge" in engineOverrides) || !("generateScripts" in engineOverrides)) {
     try {
-      const config = loadConfig(options.config, cwd);
       const provider = makeProvider(config, judgeOptions);
       if (!options.deterministicOnly) judge = makeJudge({ provider, root: cwd });
       if (options.generate !== false) {
@@ -67,6 +70,7 @@ export async function runRun(
   return runEvals({
     judge,
     generateScripts,
+    config,
     configPath: options.config,
     globs,
     cwd: options.cwd,

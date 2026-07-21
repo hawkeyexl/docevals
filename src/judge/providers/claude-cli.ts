@@ -36,11 +36,12 @@ export class ClaudeCliProvider implements JudgeProvider {
       JSON.stringify(req.schema),
     ].join("\n");
 
+    // The prompt is piped via stdin: page bodies routinely exceed the ~32K
+    // Windows command-line limit when passed as an argument.
     const result = await this.exec(
       [
         this.command,
         "-p",
-        prompt,
         "--append-system-prompt",
         req.system,
         "--output-format",
@@ -48,7 +49,7 @@ export class ClaudeCliProvider implements JudgeProvider {
         "--model",
         this.model,
       ],
-      { timeoutMs: 180000 },
+      { timeoutMs: 180000, input: prompt },
     );
 
     if (result.spawnError) {

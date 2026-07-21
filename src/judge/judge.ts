@@ -119,6 +119,7 @@ export function makeJudge(deps: JudgeStageDeps): JudgeFn {
         provider.provider(),
         provider.modelName(),
         runsPerEval,
+        temperature,
         plan.page.body,
         ev,
       );

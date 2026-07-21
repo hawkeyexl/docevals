@@ -55,6 +55,8 @@ export type GenerateFn = (
 
 export interface RunOptions {
   configPath?: string;
+  /** Preloaded config; skips loading/validating configPath a second time. */
+  config?: DocevalsConfig;
   globs?: string[];
   cwd?: string;
   deterministicOnly?: boolean;
@@ -84,10 +86,18 @@ function skippedResult(
   };
 }
 
+/**
+ * Collision-proof composite key for (file, eval) maps — file paths may
+ * contain any character, so field boundaries must be unambiguous.
+ */
+function resultKey(file: string, evalName: string): string {
+  return JSON.stringify([file, evalName]);
+}
+
 function groupFindings(findings: Finding[]): Map<string, Finding[]> {
   const map = new Map<string, Finding[]>();
   for (const f of findings) {
-    const key = `${f.file} ${f.evalName}`;
+    const key = resultKey(f.file, f.evalName);
     const list = map.get(key) ?? [];
     list.push(f);
     map.set(key, list);
@@ -104,12 +114,12 @@ function summarizeSuites(
   const suiteOf = new Map<string, string>();
   for (const plan of plans) {
     for (const ev of plan.evals) {
-      suiteOf.set(`${plan.page.file} ${ev.name}`, ev.suite);
+      suiteOf.set(resultKey(plan.page.file, ev.name), ev.suite);
     }
   }
   const bySuite = new Map<string, EvalResult[]>();
   for (const r of results) {
-    const suite = suiteOf.get(`${r.file} ${r.evalName}`) ?? "default";
+    const suite = suiteOf.get(resultKey(r.file, r.evalName)) ?? "default";
     const list = bySuite.get(suite) ?? [];
     list.push(r);
     bySuite.set(suite, list);
@@ -142,7 +152,7 @@ function summarizeSuites(
 
 export async function runEvals(options: RunOptions = {}): Promise<EngineReport> {
   const cwd = options.cwd ?? process.cwd();
-  const config = loadConfig(options.configPath, cwd);
+  const config = options.config ?? loadConfig(options.configPath, cwd);
   const exec = options.exec ?? realExec;
   const pages = discoverPages(config, options.globs ?? [], cwd);
   const plans = resolvePages(pages, config);
@@ -314,8 +324,7 @@ export async function runEvals(options: RunOptions = {}): Promise<EngineReport> 
     allFindings.push(...findings);
     const grouped = groupFindings(findings);
     for (const t of targets) {
-      const own =
-        grouped.get(`${t.plan.page.file} ${t.eval.name}`) ?? [];
+      const own = grouped.get(resultKey(t.plan.page.file, t.eval.name)) ?? [];
       const hasError = own.some((f) => f.severity === "error");
       results.push({
         evalName: t.eval.name,
