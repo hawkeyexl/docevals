@@ -46,18 +46,23 @@ jobs:
       # a stale review date at error severity.
       - name: Dogfood run (deterministic graders)
         shell: bash
+        # Report path is relative on purpose. On windows-latest this runs under
+        # Git Bash, which maps an absolute POSIX path like /tmp to its own root,
+        # while node.exe resolves the same literal string against the current
+        # drive (D:\tmp) — so the write and the read land in different places.
+        # A relative path resolves identically for both.
         run: |
           set +e
-          node dist/cli.js run --deterministic-only --no-generate --format json > /tmp/docevals-run.json
+          node dist/cli.js run --deterministic-only --no-generate --format json > docevals-run.json
           code=$?
           set -e
           if [ "$code" -ne 1 ]; then
             echo "Expected exit 1 from the fixture corpus, got $code"
-            cat /tmp/docevals-run.json
+            cat docevals-run.json
             exit 1
           fi
           node -e '
-            let raw = require("fs").readFileSync("/tmp/docevals-run.json", "utf8");
+            let raw = require("fs").readFileSync("docevals-run.json", "utf8");
             if (raw.charCodeAt(0) === 0xfeff) raw = raw.slice(1); // tolerate a BOM
             const r = JSON.parse(raw);
             const find = (f, e) => r.evalResults.find((x) => x.file.endsWith(f) && x.evalName === e);
