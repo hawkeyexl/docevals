@@ -47,7 +47,7 @@ function fakeExec(result: Partial<ExecResult>): { exec: ExecFn; calls: string[][
 
 describe("commandGrader", () => {
   const fm = [
-    "docevals:",
+    "evals:",
     "  evals:",
     "    - name: check",
     "      assertion: Something.",
@@ -134,7 +134,7 @@ describe("freshnessGrader", () => {
   );
 
   function freshTarget(frontmatter: string): GraderTarget {
-    const content = `---\n${frontmatter}\ndocevals:\n  suite: s\n---\nBody.`;
+    const content = `---\n${frontmatter}\nevals:\n  suite: s\n---\nBody.`;
     const page: PageFile = {
       file: "docs/page.md",
       absPath: "/fake/docs/page.md",
@@ -243,7 +243,7 @@ describe("reading level", () => {
         "Notwithstanding organizational considerations, comprehensive implementation methodologies necessitate extraordinarily sophisticated administrative infrastructure.",
       )
       .join(" ");
-    const content = `---\ntitle: x\ndocevals:\n  suite: s\n---\n${body}`;
+    const content = `---\ntitle: x\nevals:\n  suite: s\n---\n${body}`;
     const page: PageFile = {
       file: "docs/page.md",
       absPath: "/fake/docs/page.md",

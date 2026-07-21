@@ -21,7 +21,7 @@ const PAGE = [
   "---",
   "title: Sample",
   "# a comment that must survive",
-  "docevals:",
+  "evals:",
   "  evals:",
   "    - name: gen-me",
   "      assertion: The page has a heading.",
@@ -218,7 +218,7 @@ describe("makeGenerateScripts", () => {
     );
     const page = readPage(pagePath, root);
     const plan = resolvePage(
-      { ...page, frontmatter: { ...page.frontmatter, data: { docevals: { suite: "s" } } } },
+      { ...page, frontmatter: { ...page.frontmatter, data: { evals: { suite: "s" } } } },
       config,
     );
     const location = scriptLocationFor(

@@ -68,12 +68,23 @@ function applyUpdates(
   }
 }
 
+/**
+ * The `evals` key is either the eval list itself (array form) or an object
+ * whose `evals` field holds the list.
+ */
+function evalSeq(doc: Document): YAMLSeq | undefined {
+  const node = doc.get("evals", true);
+  if (node instanceof YAMLSeq) return node;
+  const nested = doc.getIn(["evals", "evals"]);
+  return nested instanceof YAMLSeq ? nested : undefined;
+}
+
 function findEvalNode(
   doc: Document,
   evalName: string,
 ): YAMLMap | undefined {
-  const evals = doc.getIn(["docevals", "evals"]);
-  if (!(evals instanceof YAMLSeq)) return undefined;
+  const evals = evalSeq(doc);
+  if (!evals) return undefined;
   for (const item of evals.items) {
     if (isMap(item)) {
       const name = item.get("name") ?? item.get("use");
@@ -151,8 +162,8 @@ export function isScalarEvalEntry(content: string, evalName: string): boolean {
   try {
     const { block } = splitYamlFrontmatter(content, "");
     const doc = parseDocument(block);
-    const evals = doc.getIn(["docevals", "evals"]);
-    if (!(evals instanceof YAMLSeq)) return false;
+    const evals = evalSeq(doc);
+    if (!evals) return false;
     return evals.items.some((i) => isScalar(i) && i.value === evalName);
   } catch {
     return false;

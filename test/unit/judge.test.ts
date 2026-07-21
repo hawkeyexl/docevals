@@ -94,7 +94,7 @@ function makeTarget(body: string, name = "claim-check"): GraderTarget {
   const content = [
     "---",
     "title: x",
-    "docevals:",
+    "evals:",
     "  evals:",
     `    - name: ${name}`,
     "      assertion: The page satisfies the claim.",

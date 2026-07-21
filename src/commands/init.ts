@@ -15,7 +15,7 @@ files:
     - "**/node_modules/**"
 
 defaults:
-  # Suite applied to pages without a docevals frontmatter key.
+  # Suite applied to pages without an evals frontmatter key.
   suite: null
   failFast: false
   concurrency: 4

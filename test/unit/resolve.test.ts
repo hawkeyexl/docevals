@@ -37,7 +37,7 @@ function page(frontmatterYaml: string, body = "Body."): PageFile {
 
 describe("resolvePage", () => {
   it("resolves suite evals from config", () => {
-    const plan = resolvePage(page("docevals:\n  suite: ref"), CONFIG);
+    const plan = resolvePage(page("evals:\n  suite: ref"), CONFIG);
     expect(plan.suite).toBe("ref");
     expect(plan.evals.map((e) => e.name).sort()).toEqual([
       "central-llm",
@@ -47,7 +47,7 @@ describe("resolvePage", () => {
   });
 
   it("defaults type to regression and grader to llm", () => {
-    const plan = resolvePage(page("docevals:\n  suite: ref"), CONFIG);
+    const plan = resolvePage(page("evals:\n  suite: ref"), CONFIG);
     const llm = plan.evals.find((e) => e.name === "central-llm")!;
     expect(llm.type).toBe("regression");
     expect(llm.grader).toBe("llm");
@@ -56,18 +56,45 @@ describe("resolvePage", () => {
 
   it("applies string-shorthand references", () => {
     const plan = resolvePage(
-      page("docevals:\n  evals:\n    - central-llm"),
+      page("evals:\n  evals:\n    - central-llm"),
       CONFIG,
     );
     expect(plan.evals).toHaveLength(1);
     expect(plan.evals[0]?.name).toBe("central-llm");
   });
 
+  it("accepts the array shorthand for the evals key", () => {
+    const plan = resolvePage(
+      page(
+        [
+          "evals:",
+          "  - central-llm",
+          "  - name: inline-check",
+          "    assertion: Inline claim.",
+          "    examples: { pass: yes, fail: no }",
+        ].join("\n"),
+      ),
+      CONFIG,
+    );
+    expect(plan.problems.filter((p) => p.level === "error")).toHaveLength(0);
+    expect(plan.evals.map((e) => e.name).sort()).toEqual([
+      "central-llm",
+      "inline-check",
+    ]);
+  });
+
+  it("reports line-accurate problems in the array shorthand", () => {
+    const plan = resolvePage(page("evals:\n  - ghost"), CONFIG);
+    const err = plan.problems.find((p) => p.level === "error");
+    expect(err?.message).toMatch(/Unknown eval "ghost"/);
+    expect(err?.line).toBe(3);
+  });
+
   it("merges reference overrides onto suite evals", () => {
     const plan = resolvePage(
       page(
         [
-          "docevals:",
+          "evals:",
           "  suite: ref",
           "  evals:",
           "    - use: central-tool",
@@ -90,7 +117,7 @@ describe("resolvePage", () => {
     const plan = resolvePage(
       page(
         [
-          "docevals:",
+          "evals:",
           "  evals:",
           "    - name: my-inline",
           "      assertion: Inline claim.",
@@ -106,7 +133,7 @@ describe("resolvePage", () => {
   it("warns when an inline llm eval lacks examples", () => {
     const plan = resolvePage(
       page(
-        "docevals:\n  evals:\n    - name: bare\n      assertion: Claim.",
+        "evals:\n  evals:\n    - name: bare\n      assertion: Claim.",
       ),
       CONFIG,
     );
@@ -115,7 +142,7 @@ describe("resolvePage", () => {
 
   it("reports unknown eval references as errors with a line", () => {
     const plan = resolvePage(
-      page("docevals:\n  evals:\n    - ghost"),
+      page("evals:\n  evals:\n    - ghost"),
       CONFIG,
     );
     const err = plan.problems.find((p) => p.level === "error");
@@ -124,14 +151,14 @@ describe("resolvePage", () => {
   });
 
   it("reports an unknown suite as an error", () => {
-    const plan = resolvePage(page("docevals:\n  suite: ghost"), CONFIG);
+    const plan = resolvePage(page("evals:\n  suite: ghost"), CONFIG);
     expect(plan.problems[0]?.message).toMatch(/Unknown suite "ghost"/);
     expect(plan.evals).toHaveLength(0);
   });
 
   it("rejects malformed docevals frontmatter via schema", () => {
     const plan = resolvePage(
-      page("docevals:\n  evals:\n    - name: Bad_Name\n      assertion: x"),
+      page("evals:\n  evals:\n    - name: Bad_Name\n      assertion: x"),
       CONFIG,
     );
     expect(plan.problems.some((p) => p.level === "error")).toBe(true);
@@ -140,7 +167,7 @@ describe("resolvePage", () => {
 
   it("requires assertion for llm-graded inline evals", () => {
     const plan = resolvePage(
-      page("docevals:\n  evals:\n    - name: no-claim"),
+      page("evals:\n  evals:\n    - name: no-claim"),
       CONFIG,
     );
     expect(plan.problems.some((p) => p.level === "error")).toBe(true);
@@ -150,7 +177,7 @@ describe("resolvePage", () => {
     const plan = resolvePage(
       page(
         [
-          "docevals:",
+          "evals:",
           "  evals:",
           "    - name: gen-me",
           "      assertion: Deterministic claim.",
@@ -167,7 +194,7 @@ describe("resolvePage", () => {
     const plan = resolvePage(
       page(
         [
-          "docevals:",
+          "evals:",
           "  skip: true",
           "  evals:",
           "    - use: central-llm",

@@ -51,7 +51,7 @@ describe.skipIf(!LIVE)("live smoke via Claude CLI", () => {
       [
         "---",
         "title: Live",
-        "docevals:",
+        "evals:",
         "  evals:",
         "    - name: has-code-block",
         "      assertion: The page contains at least one fenced code block.",

@@ -60,11 +60,24 @@ interface FrontmatterEvalRef {
 
 type FrontmatterEvalEntry = string | FrontmatterEvalRef | (EvalDef & { name: string; skip?: boolean });
 
-interface DocevalsKey {
+interface EvalsKey {
   suite?: string;
   skip?: boolean;
   generatedBy?: string;
   evals?: FrontmatterEvalEntry[];
+}
+
+/**
+ * The `evals` frontmatter key accepts an array (just the eval list) or an
+ * object ({suite, skip, generatedBy, evals}). Normalize to the object form,
+ * and report the JSON-Pointer prefix under which eval entries live so
+ * problems map to the right source lines.
+ */
+function normalizeEvalsKey(raw: unknown): { fm: EvalsKey; entriesPtr: string } {
+  if (Array.isArray(raw)) {
+    return { fm: { evals: raw as FrontmatterEvalEntry[] }, entriesPtr: "/evals" };
+  }
+  return { fm: (raw ?? {}) as EvalsKey, entriesPtr: "/evals/evals" };
 }
 
 function fromDef(
@@ -105,8 +118,8 @@ export function resolvePage(
   }
 
   const data = page.frontmatter.data;
-  // Validate only the docevals key shape; other frontmatter is out of scope here.
-  if ("docevals" in data && !validateFrontmatter({ docevals: data.docevals })) {
+  // Validate only the evals key shape; other frontmatter is out of scope here.
+  if ("evals" in data && !validateFrontmatter({ evals: data.evals })) {
     for (const e of validateFrontmatter.errors ?? []) {
       problems.push({
         message: `frontmatter${e.instancePath}: ${e.message}`,
@@ -117,13 +130,13 @@ export function resolvePage(
     return { page, skip: false, suite: null, evals: [], problems };
   }
 
-  const fm = (data.docevals ?? {}) as DocevalsKey;
+  const { fm, entriesPtr } = normalizeEvalsKey(data.evals);
   const suiteName = fm.suite ?? config.defaults.suite;
   if (fm.suite && !(fm.suite in config.suites)) {
     problems.push({
       message: `Unknown suite "${fm.suite}" (not defined in ${config.configPath})`,
       level: "error",
-      line: page.frontmatter.lineFor("/docevals/suite") ?? 1,
+      line: page.frontmatter.lineFor("/evals/suite") ?? 1,
     });
     return { page, skip: fm.skip ?? false, suite: null, evals: [], problems };
   }
@@ -142,7 +155,7 @@ export function resolvePage(
   // 2. Page entries: references (with overrides) and inline evals.
   const reportSuite = suiteName ?? "default";
   for (const [i, entry] of (fm.evals ?? []).entries()) {
-    const linePtr = `/docevals/evals/${i}`;
+    const linePtr = `${entriesPtr}/${i}`;
     if (typeof entry === "string" || "use" in entry) {
       const ref: FrontmatterEvalRef =
         typeof entry === "string" ? { use: entry } : entry;

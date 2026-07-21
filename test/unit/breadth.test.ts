@@ -74,7 +74,7 @@ describe("differentiation", () => {
   });
 
   function target(file: string, body: string, config = DIFF_CONFIG): GraderTarget {
-    const content = `---\ntitle: x\ndocevals:\n  suite: s\n---\n${body}`;
+    const content = `---\ntitle: x\nevals:\n  suite: s\n---\n${body}`;
     const page: PageFile = {
       file,
       absPath: `/fake/${file}`,
@@ -136,7 +136,7 @@ describe("valeGrader", () => {
       ].join("\n"),
       "/fake/docevals.config.yaml",
     );
-    const content = "---\ntitle: x\ndocevals:\n  suite: s\n---\nBody.";
+    const content = "---\ntitle: x\nevals:\n  suite: s\n---\nBody.";
     const page: PageFile = {
       file: "docs/page.md",
       absPath: "/fake/docs/page.md",

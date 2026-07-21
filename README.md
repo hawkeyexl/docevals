@@ -21,13 +21,13 @@ Requires Node.js 24+.
 
 ## Declare evals in frontmatter
 
-All eval fields live in page frontmatter under the `docevals` key, validated by the `docevals:frontmatter:0.1` schema (also a docmeta built-in). Pages can reference named evals from `docevals.config.yaml`, or inline their own:
+All eval fields live in page frontmatter under the `evals` key, validated by the `docevals:frontmatter:0.1` schema (also a docmeta built-in). Pages can reference named evals from `docevals.config.yaml`, or inline their own. The key takes either an array (just the evals) or an object (when you need `suite` or `skip`):
 
 ```yaml
 ---
 title: Installation
 last-reviewed: 2026-06-01
-docevals:
+evals:
   suite: how-to                  # named suite from docevals.config.yaml
   evals:
     - no-future-promises         # reference a named eval
@@ -44,6 +44,18 @@ docevals:
     - name: install-command-present
       assertion: The page contains a bash code block with `npm i -g doc-detective`.
       grader: command            # no command? docevals generates a script for it
+---
+```
+
+When a page needs no suite, the array shorthand keeps it minimal:
+
+```yaml
+---
+title: Concepts
+evals:
+  - no-future-promises
+  - name: defines-core-terms
+    assertion: The page defines every core concept it introduces.
 ---
 ```
 
