@@ -104,7 +104,7 @@ Examples from this repo's history:
 
 ## How version selection works
 
-Once semantic-release is wired (see ["Enforcement not yet wired"](#enforcement-not-yet-wired)), versions follow commit types:
+Versions and releases are automated by **semantic-release** ([.releaserc.json](.releaserc.json)) based on commit types:
 
 | Commit type | Version bump |
 |---|---|
@@ -114,6 +114,14 @@ Once semantic-release is wired (see ["Enforcement not yet wired"](#enforcement-n
 | `chore:`, `docs:`, `ci:`, `style:`, `test:`, `refactor:`, `build:`, `perf:` | no release |
 
 Pick the commit type deliberately — it is the **only** signal that decides whether a release is cut. Note that only the **first line** is parsed as the header; a `!` appearing in a body line (as happens in squash commits) does not mark a breaking change.
+
+## Release channels
+
+| Branch | npm dist-tag | Install |
+|---|---|---|
+| `main` | `latest` | `npm i docevals` |
+| `next` | `next` | `npm i docevals@next` |
+| `feat/**` (any depth) | `<slug>` (branch suffix lowercased, non-alphanumeric → `-`) | `npm i docevals@<slug>` |
 
 ## Don't
 
@@ -203,25 +211,46 @@ Durable decisions behind the current shape. Backfill these into `adrs/` when tha
 - **Schemas are published by the tool that owns them.** docevals ships `schemas/frontmatter-0.1.json` as a package artifact rather than registering it as a docmeta built-in — that keeps schema versioning in this repo instead of gated on a docmeta release. A built-in was built and PR'd before this was reversed; don't re-propose it.
 - **Conceptual source**: the *Docs as Tests with AI* manuscript (draft 4) — the grader hierarchy, eval sketch fields, 3-run ensemble, confidence zones, 70% calibration threshold, and 15% false-positive alert all come from it.
 
-## Enforcement not yet wired
+## Enforcement
 
-These conventions are ported and binding, but the automation that enforces them in doc-detective does not exist here yet. Treat each as a follow-up, and don't assume a hook will catch you:
-
-| Convention | Missing |
+| Convention | Enforced by |
 |---|---|
-| Commit messages | No husky `commit-msg` hook, no `commitlint.config.cjs`, no commitlint CI job |
-| Version selection / release channels | No `.releaserc.json`, no release workflow; the package is unpublished |
-| ADRs | No `adrs/` directory yet |
-| Docs impact | No docs site; the README is the only user-facing surface |
+| Build, tests, typecheck, dogfood run | [ci.yml](.github/workflows/ci.yml) — ubuntu + windows |
+| Commit messages | husky [`commit-msg`](.husky/commit-msg) hook locally, [commitlint.yml](.github/workflows/commitlint.yml) on PRs |
+| Version selection / release channels | [.releaserc.json](.releaserc.json) + [release.yml](.github/workflows/release.yml) |
+| ADRs | [adrs/](adrs) — convention and template; not machine-enforced |
+| Automated review | [claude-pr-review.yml](.github/workflows/claude-pr-review.yml), [claude.yml](.github/workflows/claude.yml) |
 
-CI that *does* exist: `.github/workflows/ci.yml` (typecheck, build, test, and a dogfood gate on ubuntu + windows), plus the two Claude workflows — `claude-pr-review.yml` (reviews every PR) and `claude.yml` (responds to `@claude` from trusted authors). Both skip cleanly until the repo has a token:
+The husky hook installs via the `prepare` script on `npm install`. If commits stop being linted, check `git config core.hooksPath` — it should be `.husky/_`. Run `npx husky` to reinstall.
 
-```bash
-gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo hawkeyexl/docevals
-```
+### Still requiring one-time setup
+
+Two workflows are inert until configured, by design — both would otherwise fail on every run or take an irreversible action:
+
+- **Claude review** (`claude-pr-review.yml`, `claude.yml`) skip with a notice until the repo has a token:
+
+  ```bash
+  gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo hawkeyexl/docevals
+  ```
+
+- **Releases** are opt-in. docevals has never been published and a first npm publish cannot be undone, so `release.yml` runs only when a repository variable says to:
+
+  ```bash
+  gh variable set RELEASE_ENABLED --body true --repo hawkeyexl/docevals
+  ```
+
+  Before enabling, configure npm trusted publishing for the package (add a trusted publisher on npmjs.com naming this repo and `release.yml`) so the publish authenticates via OIDC without an `NPM_TOKEN`. The release commit is pushed with the default `GITHUB_TOKEN`, which works while `main` has no ruleset requiring PRs; if one is added, this needs a GitHub App token as a bypass actor, as docmeta does.
+
+The remaining unported convention is **docs impact** — doc-detective gates behavior changes on a docs assessment against its content strategy. docevals has no docs site, so the README is the only user-facing surface and there is nothing to gate.
 
 ## Related files
 
+- [.releaserc.json](.releaserc.json) — semantic-release branches and plugins
+- [commitlint.config.cjs](commitlint.config.cjs) — commitlint rules
+- [.husky/commit-msg](.husky/commit-msg) — local commit-message hook
+- [adrs/](adrs) — decision records, template, and backfill list
+- [.github/workflows/release.yml](.github/workflows/release.yml) — release pipeline (opt-in)
+- [.github/workflows/commitlint.yml](.github/workflows/commitlint.yml) — PR commit-message enforcement
 - [.github/workflows/ci.yml](.github/workflows/ci.yml) — build/test matrix and the dogfood gate
 - [.github/workflows/claude-pr-review.yml](.github/workflows/claude-pr-review.yml) — automatic review on every PR
 - [.github/workflows/claude.yml](.github/workflows/claude.yml) — interactive `@claude` in issues, PR comments, and reviews (trusted authors only)
