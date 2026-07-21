@@ -48,4 +48,9 @@ export {
   updatePageEval,
   updateConfigEval,
 } from "./core/frontmatter-edit.js";
+export {
+  frontmatterSchema,
+  frontmatterSchemaPath,
+  FRONTMATTER_SCHEMA_ID,
+} from "./schema.js";
 export * from "./types.js";

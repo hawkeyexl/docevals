@@ -23,7 +23,7 @@ TypeScript/ESM CLI + library. Node >= 24. Mirrors docmeta conventions (same auth
 - Errored judge runs count against consensus — they may push an eval to human-review, never to a silent pass.
 - Deterministic evals fail only on `error`-severity findings; warnings/info report but pass.
 - Exit codes: 0 pass, 1 any fail/error/suite-miss, 2 operational (`DocevalsError`).
-- `src/schemas/frontmatter-0.1.json` must stay identical to docmeta's `src/schemas/docevals/0.1.json` (drift-guarded by `test/unit/schema-drift.test.ts`). Update both together.
+- `schemas/frontmatter-0.1.json` is a **published artifact**, not internal source: it ships in the package (`files`/`exports`) and consumers point their validator at it by path. It is not registered as a built-in inside docmeta — keep the `$id` a resolvable URL, and pin its behavior in `test/unit/schema.test.ts`.
 - docmeta is a `file:../docmeta` dependency until a docmeta release ships the `extractFrontmatter` export; switch to a semver range then.
 
 ## Fixtures

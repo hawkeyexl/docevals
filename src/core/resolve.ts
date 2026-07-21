@@ -5,7 +5,7 @@
  * name collision.
  */
 import { Ajv2020 } from "ajv/dist/2020.js";
-import frontmatterSchema from "../schemas/frontmatter-0.1.json" with { type: "json" };
+import frontmatterSchema from "../../schemas/frontmatter-0.1.json" with { type: "json" };
 import type { EvalType, GraderKind, Severity } from "../types.js";
 import type { DocevalsConfig, EvalDef } from "./config.js";
 import type { PageFile } from "./discover.js";

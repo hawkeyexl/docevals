@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "docevals:frontmatter:0.1",
+  "$id": "https://hawkeyexl.github.io/docevals/schemas/frontmatter-0.1.json",
   "title": "docevals frontmatter",
   "description": "Page-level eval declarations for docevals under the `evals` key. Evals are graded by code (command/tool graders), an LLM judge, or a human.",
   "type": "object",

@@ -14,10 +14,12 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./schemas/frontmatter-0.1.json": "./schemas/frontmatter-0.1.json",
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "schemas"
   ],
   "repository": {
     "type": "git",

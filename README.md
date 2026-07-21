@@ -21,7 +21,7 @@ Requires Node.js 24+.
 
 ## Declare evals in frontmatter
 
-All eval fields live in page frontmatter under the `evals` key, validated by the `docevals:frontmatter:0.1` schema (also a docmeta built-in). Pages can reference named evals from `docevals.config.yaml`, or inline their own. The key takes either an array (just the evals) or an object (when you need `suite` or `skip`):
+All eval fields live in page frontmatter under the `evals` key, validated by the JSON Schema this package publishes at [`schemas/frontmatter-0.1.json`](schemas/frontmatter-0.1.json). Pages can reference named evals from `docevals.config.yaml`, or inline their own. The key takes either an array (just the evals) or an object (when you need `suite` or `skip`):
 
 ```yaml
 ---
@@ -57,6 +57,32 @@ evals:
   - name: defines-core-terms
     assertion: The page defines every core concept it introduces.
 ---
+```
+
+### Validating the frontmatter itself
+
+The schema ships with the package, so any JSON Schema validator can check your pages. With [docmeta](https://github.com/hawkeyexl/docmeta):
+
+```bash
+docmeta validate --schema node_modules/docevals/schemas/frontmatter-0.1.json docs/
+```
+
+Or wire it into docevals as a deterministic eval, so bad eval declarations fail the run like any other check:
+
+```yaml
+evals:
+  frontmatter-valid:
+    assertion: Page frontmatter matches the docevals schema.
+    grader: tool:docmeta
+    options:
+      schemas: ["node_modules/docevals/schemas/frontmatter-0.1.json"]
+    severity: error
+```
+
+Programmatic consumers can import the schema object or its resolved path:
+
+```js
+import { frontmatterSchema, frontmatterSchemaPath } from "docevals";
 ```
 
 ## Generated check scripts
