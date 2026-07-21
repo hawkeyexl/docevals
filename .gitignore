@@ -3,3 +3,10 @@ dist/
 .docevals/
 *.tsbuildinfo
 .DS_Store
+
+# Scratch space for transient files. Keep them in the worktree, never in
+# %TEMP% or /tmp — see "Testing behavior" in CLAUDE.md.
+.tmp/
+
+# Report written by the CI dogfood gate; also produced by a local dogfood run.
+docevals-run.json
