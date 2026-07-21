@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    # docevals shells out to external tools (markdownlint, Vale, generated
+    # check scripts), and the spawn path is genuinely platform-specific:
+    # exec.ts leans on cross-spawn to resolve npm `.cmd` shims on Windows, and
+    # frontmatter-edit.ts preserves CRLF. Both are developed on Windows and
+    # deployed in Linux CI, so test the pair rather than trusting one.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      # npm install, not ci — same reason as dockg. The lockfile is authored on
+      # Windows, where npm prunes the @napi-rs/wasm-runtime subtree that the
+      # bundler toolchain lists as an optional wasm fallback. The lock keeps
+      # that package's `@emnapi/*` requirements but not their resolved entries,
+      # so `npm ci` fails its sync check on *every* runner (Windows included)
+      # with "Missing: @emnapi/core from lock file". Regenerating from Windows
+      # cannot add them. Revisit if the lockfile is ever authored on Linux.
+      - run: npm install --no-fund --no-audit
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+
+      # The suite mocks the judge provider and injects a fake exec, so it never
+      # reaches the network. Prove the CLI itself works end to end against the
+      # fixture corpus using only deterministic graders — this is what would
+      # catch a broken bin entry, a bad dist build, or a grader that only works
+      # under vitest's module resolution.
+      # Exit 1 is the expected, asserted outcome: goTo.mdx deliberately carries
+      # a stale review date at error severity.
+      - name: Dogfood run (deterministic graders)
+        shell: bash
+        # Report path is relative on purpose. On windows-latest this runs under
+        # Git Bash, which maps an absolute POSIX path like /tmp to its own root,
+        # while node.exe resolves the same literal string against the current
+        # drive (D:\tmp) — so the write and the read land in different places.
+        # A relative path resolves identically for both.
+        run: |
+          set +e
+          node dist/cli.js run --deterministic-only --no-generate --format json > docevals-run.json
+          code=$?
+          set -e
+          if [ "$code" -ne 1 ]; then
+            echo "Expected exit 1 from the fixture corpus, got $code"
+            cat docevals-run.json
+            exit 1
+          fi
+          node -e '
+            let raw = require("fs").readFileSync("docevals-run.json", "utf8");
+            if (raw.charCodeAt(0) === 0xfeff) raw = raw.slice(1); // tolerate a BOM
+            const r = JSON.parse(raw);
+            const find = (f, e) => r.evalResults.find((x) => x.file.endsWith(f) && x.evalName === e);
+            const check = (label, actual, expected) => {
+              if (actual !== expected) {
+                console.error(`${label}: expected ${expected}, got ${actual}`);
+                process.exitCode = 1;
+              }
+            };
+            // The pre-generated fixture script runs and passes.
+            check("find.mdx has-examples-heading", find("find.mdx", "has-examples-heading")?.outcome, "pass");
+            // Severity-overridden freshness fails; warning-severity does not.
+            check("goTo.mdx fresh-enough", find("goTo.mdx", "fresh-enough")?.outcome, "fail");
+            check("concepts.md fresh-enough", find("concepts.md", "fresh-enough")?.outcome, "pass");
+            // docevals validates its own frontmatter through published docmeta.
+            const fm = r.evalResults.filter((x) => x.evalName === "frontmatter-valid");
+            if (fm.length === 0) { console.error("no frontmatter-valid results"); process.exitCode = 1; }
+            for (const x of fm) check(`${x.file} frontmatter-valid`, x.outcome, "pass");
+          '
