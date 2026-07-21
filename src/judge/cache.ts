@@ -43,6 +43,9 @@ export function cacheKey(
 }
 
 export class JudgeCache {
+  /** Cache-write failures warn once per run, not once per eval. */
+  private warned = false;
+
   constructor(
     private readonly dir: string,
     private readonly enabled: boolean = true,
@@ -62,7 +65,18 @@ export class JudgeCache {
 
   set(key: string, runs: JudgeRun[]): void {
     if (!this.enabled) return;
-    mkdirSync(this.dir, { recursive: true });
-    writeFileSync(join(this.dir, `${key}.json`), JSON.stringify(runs, null, 2));
+    // The cache is an optimization: a write failure (read-only workspace, full
+    // disk, long path) must never abort a run whose judging already succeeded.
+    try {
+      mkdirSync(this.dir, { recursive: true });
+      writeFileSync(join(this.dir, `${key}.json`), JSON.stringify(runs, null, 2));
+    } catch (e) {
+      if (!this.warned) {
+        this.warned = true;
+        console.warn(
+          `docevals: could not write the judge cache at ${this.dir} (${e instanceof Error ? e.message : String(e)}). Continuing without caching.`,
+        );
+      }
+    }
   }
 }

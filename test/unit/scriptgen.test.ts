@@ -160,6 +160,8 @@ describe("makeGenerateScripts", () => {
     const result = report.evalResults.find((r) => r.evalName === "gen-me");
     // The generated script checks for a heading; the page has one.
     expect(result?.outcome).toBe("pass");
+    // Flags the eval as generated on this run, so reporters can mark it.
+    expect(result?.generated).toBe(true);
     expect(report.generated).toEqual(["docs/docevals/sample.gen-me.mjs"]);
   });
 

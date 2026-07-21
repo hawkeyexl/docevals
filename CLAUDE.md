@@ -24,7 +24,7 @@ TypeScript/ESM CLI + library. Node >= 24. Mirrors docmeta conventions (same auth
 - Deterministic evals fail only on `error`-severity findings; warnings/info report but pass.
 - Exit codes: 0 pass, 1 any fail/error/suite-miss, 2 operational (`DocevalsError`).
 - `schemas/frontmatter-0.1.json` is a **published artifact**, not internal source: it ships in the package (`files`/`exports`) and consumers point their validator at it by path. It is not registered as a built-in inside docmeta — keep the `$id` a resolvable URL, and pin its behavior in `test/unit/schema.test.ts`.
-- docmeta is a `file:../docmeta` dependency until a docmeta release ships the `extractFrontmatter` export; switch to a semver range then.
+- docmeta is a published dependency (`^1.3.0`) consumed as a library for `extractFrontmatter` (shared fence handling + JSON-Pointer line maps) and `runValidate` (the `tool:docmeta` grader). 1.3.0 is the floor — it's the release that added those exports.
 
 ## Fixtures
 

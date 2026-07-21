@@ -172,6 +172,8 @@ export async function runEvals(options: RunOptions = {}): Promise<EngineReport> 
   const llmTargets: GraderTarget[] = [];
   const generationTargets: GraderTarget[] = [];
   const generatedPaths: string[] = [];
+  /** "<file> <evalName>" keys whose check script this run generated. */
+  const generatedThisRun = new Set<string>();
 
   const allowFrontmatterCommands =
     (options.frontmatterCommands ?? true) &&
@@ -259,6 +261,8 @@ export async function runEvals(options: RunOptions = {}): Promise<EngineReport> 
       for (const t of generationTargets) {
         if (t.eval.command) {
           deterministicTargets.push(t);
+          // Surfaced by the reporters as "(generated)" on this run's result.
+          generatedThisRun.add(resultKey(t.plan.page.file, t.eval.name));
         } else {
           results.push({
             evalName: t.eval.name,
@@ -324,7 +328,8 @@ export async function runEvals(options: RunOptions = {}): Promise<EngineReport> 
     allFindings.push(...findings);
     const grouped = groupFindings(findings);
     for (const t of targets) {
-      const own = grouped.get(resultKey(t.plan.page.file, t.eval.name)) ?? [];
+      const key = resultKey(t.plan.page.file, t.eval.name);
+      const own = grouped.get(key) ?? [];
       const hasError = own.some((f) => f.severity === "error");
       results.push({
         evalName: t.eval.name,
@@ -333,6 +338,7 @@ export async function runEvals(options: RunOptions = {}): Promise<EngineReport> 
         file: t.plan.page.file,
         outcome: hasError ? "fail" : "pass",
         findings: own.length > 0 ? own : undefined,
+        generated: generatedThisRun.has(key) ? true : undefined,
         durationMs: Math.round(durationMs / targets.length),
       });
     }
