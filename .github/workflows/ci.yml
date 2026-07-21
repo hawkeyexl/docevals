@@ -25,9 +25,14 @@ jobs:
           node-version: 24
           cache: npm
 
-      # `npm ci` (not install): docevals depends on published docmeta, so the
-      # lockfile is fully resolvable and should be enforced strictly.
-      - run: npm ci
+      # npm install, not ci — same reason as dockg. The lockfile is authored on
+      # Windows, where npm prunes the @napi-rs/wasm-runtime subtree that the
+      # bundler toolchain lists as an optional wasm fallback. The lock keeps
+      # that package's `@emnapi/*` requirements but not their resolved entries,
+      # so `npm ci` fails its sync check on *every* runner (Windows included)
+      # with "Missing: @emnapi/core from lock file". Regenerating from Windows
+      # cannot add them. Revisit if the lockfile is ever authored on Linux.
+      - run: npm install --no-fund --no-audit
       - run: npm run typecheck
       - run: npm run build
       - run: npm test
