@@ -217,6 +217,8 @@ describe("runFill", () => {
     ]);
     const report = await runFill([], { cwd: root, providerInstance: provider, noCache: true });
     expect(report.results[0]?.written.map((p) => p.name)).toEqual(["first-check"]);
+    // Proposals over the cap are surfaced, not silently dropped.
+    expect(report.results[0]?.capped.map((p) => p.name)).toEqual(["second-check"]);
   });
 
   it("does not let duplicates consume the per-page cap", async () => {

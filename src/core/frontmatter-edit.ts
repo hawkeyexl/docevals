@@ -224,7 +224,7 @@ export function appendPageEvals(
 
   let seq = evalSeq(doc);
   if (!seq) {
-    seq = new YAMLSeq();
+    seq = doc.createNode([]) as YAMLSeq;
     const node = doc.get("evals", true);
     if (node === undefined) {
       doc.set("evals", seq);

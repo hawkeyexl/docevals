@@ -68,6 +68,8 @@ export interface FillPageResult {
   written: ProposedEval[];
   /** Proposals below the confidence threshold — reported, never written. */
   belowThreshold: ProposedEval[];
+  /** Fresh proposals dropped for exceeding `fill.maxEvalsPerPage`. */
+  capped: ProposedEval[];
   /** Proposed names that already exist in the page's resolved plan. */
   duplicates: string[];
   cached: boolean;
@@ -151,6 +153,7 @@ export async function runFill(
       status: "nothing-proposed",
       written: [],
       belowThreshold: [],
+      capped: [],
       duplicates: [],
       cached: false,
     };
@@ -229,6 +232,10 @@ export async function runFill(
       seen.add(p.name);
       fresh.push(p);
     }
+    // Proposals beyond the per-page cap are reported as `capped` rather than
+    // silently dropped — they may be high-confidence, so folding them into
+    // belowThreshold would misreport why they weren't written.
+    const capped = fresh.slice(maxEvals);
     const belowThreshold: ProposedEval[] = [];
     const written: ProposedEval[] = [];
     for (const p of fresh.slice(0, maxEvals)) {
@@ -236,7 +243,14 @@ export async function runFill(
       else belowThreshold.push(p);
     }
 
-    const result = { ...base, written, belowThreshold, duplicates, cached };
+    const result = {
+      ...base,
+      written,
+      belowThreshold,
+      capped,
+      duplicates,
+      cached,
+    };
     if (written.length === 0) return result;
     try {
       const updated = appendPageEvals(
@@ -306,6 +320,11 @@ export function renderFill(
         pc.dim(
           `         below ${report.threshold}: ${names(r.belowThreshold)}`,
         ),
+      );
+    }
+    if (r.capped.length > 0) {
+      lines.push(
+        pc.dim(`         over per-page cap: ${names(r.capped)}`),
       );
     }
     if (r.duplicates.length > 0) {
