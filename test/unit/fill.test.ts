@@ -219,6 +219,29 @@ describe("runFill", () => {
     expect(report.results[0]?.written.map((p) => p.name)).toEqual(["first-check"]);
   });
 
+  it("does not let duplicates consume the per-page cap", async () => {
+    // maxEvalsPerPage 1, and the model leads with a duplicate of an existing
+    // eval. The duplicate must not crowd out the fresh proposal behind it.
+    const config = `${BASE_CONFIG}fill:\n  maxEvalsPerPage: 1\n`;
+    const page = [
+      "---",
+      "evals:",
+      "  - name: existing-check",
+      "    assertion: Already here.",
+      "    examples: { pass: P, fail: F }",
+      "---",
+      "body",
+      "",
+    ].join("\n");
+    const root = workspace({ "page.md": page }, config);
+    const provider = new MockProvider([
+      { json: { evals: [proposal("existing-check", 0.9), proposal("fresh-one", 0.9)] } },
+    ]);
+    const report = await runFill([], { cwd: root, providerInstance: provider, noCache: true });
+    expect(report.results[0]?.duplicates).toEqual(["existing-check"]);
+    expect(report.results[0]?.written.map((p) => p.name)).toEqual(["fresh-one"]);
+  });
+
   it("reports nothing-proposed when the model proposes nothing", async () => {
     const root = workspace({ "page.md": PLAIN_PAGE });
     const provider = new MockProvider([{ json: { evals: [] } }]);

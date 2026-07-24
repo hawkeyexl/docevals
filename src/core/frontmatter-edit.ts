@@ -6,6 +6,7 @@
  */
 import { parseDocument, Document, YAMLMap, YAMLSeq, isMap, isScalar } from "yaml";
 import { DocevalsError } from "../types.js";
+import { leadingFrontmatterFormat } from "./discover.js";
 
 export interface EvalUpdates {
   grader?: string;
@@ -192,11 +193,20 @@ export function appendPageEvals(
   path: string,
   entries: NewEvalEntry[],
 ): string {
+  const format = leadingFrontmatterFormat(content);
+  if (format === "toml" || format === "json") {
+    // Synthesizing a YAML block here would leave the page with two
+    // frontmatter blocks. Only YAML frontmatter can be edited in place.
+    throw new DocevalsError(
+      `${path}: only YAML frontmatter can be edited (found ${format} frontmatter)`,
+    );
+  }
+
   const bom = content.charCodeAt(0) === 0xfeff ? content[0]! : "";
   const stripped = bom ? content.slice(1) : content;
   const eol: "\n" | "\r\n" = stripped.includes("\r\n") ? "\r\n" : "\n";
 
-  if (!/^---\r?\n/.test(stripped)) {
+  if (format === undefined) {
     // No frontmatter: synthesize a block above the untouched body.
     const doc = new Document({ evals: entries.map(entryObject) });
     let block = doc.toString();

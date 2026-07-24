@@ -155,4 +155,11 @@ describe("appendPageEvals", () => {
     const page = ["---", "evals: [has-overview]", "---", "body", ""].join("\n");
     expect(() => appendPageEvals(page, PATH, [ENTRY])).toThrow(DocevalsError);
   });
+
+  it("refuses non-YAML frontmatter instead of prepending a second block", () => {
+    const toml = ["+++", 'title = "Page"', "+++", "", "body", ""].join("\n");
+    expect(() => appendPageEvals(toml, PATH, [ENTRY])).toThrow(/only YAML/i);
+    const json = [";;;", '{ "title": "Page" }', ";;;", "", "body", ""].join("\n");
+    expect(() => appendPageEvals(json, PATH, [ENTRY])).toThrow(/only YAML/i);
+  });
 });

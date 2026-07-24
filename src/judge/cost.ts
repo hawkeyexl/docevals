@@ -4,7 +4,7 @@
  * never a guess.
  */
 import type { JudgeRun } from "../types.js";
-import type { Pricing } from "../core/config.js";
+import type { DocevalsConfig, Pricing } from "../core/config.js";
 
 /** USD per million tokens. Keep entries pinned-model-specific. */
 const PRICE_TABLE: Record<string, Pricing> = {
@@ -14,6 +14,20 @@ const PRICE_TABLE: Record<string, Pricing> = {
   "gpt-4o-mini": { inputPerMTok: 0.15, outputPerMTok: 0.6 },
   "gpt-4o": { inputPerMTok: 2.5, outputPerMTok: 10 },
 };
+
+/**
+ * The pricing override configured for a provider, if it carries one. Only
+ * anthropic/openai are configured with pricing; claude-cli reports no usage
+ * and other providers (e.g. the mock) aren't configured at all.
+ */
+export function pricingOverrideFor(
+  config: DocevalsConfig,
+  providerName: string,
+): Pricing | undefined {
+  if (providerName === "anthropic") return config.provider.anthropic.pricing;
+  if (providerName === "openai") return config.provider.openai.pricing;
+  return undefined;
+}
 
 export function pricingFor(
   model: string,

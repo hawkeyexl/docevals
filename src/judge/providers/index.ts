@@ -33,25 +33,20 @@ export function makeProvider(
   config: DocevalsConfig,
   options: JudgeOptions = {},
 ): JudgeProvider {
-  const name = (options.provider ?? config.provider.default) as ProviderName;
+  const { name, model } = resolveProviderIdentity(config, options);
   switch (name) {
     case "anthropic":
-      return new AnthropicProvider(
-        options.model ?? config.provider.anthropic.model,
-        config.provider.anthropic.apiKeyEnv,
-      );
+      return new AnthropicProvider(model, config.provider.anthropic.apiKeyEnv);
     case "openai":
       return new OpenAICompatProvider(
         config.provider.openai.baseUrl,
-        options.model ?? config.provider.openai.model,
+        model,
         config.provider.openai.apiKeyEnv,
       );
     case "claude-cli":
       return new ClaudeCliProvider(
-        options.model ?? config.provider["claude-cli"].model,
+        model,
         config.provider["claude-cli"].command,
       );
-    default:
-      throw new DocevalsError(`Unknown provider "${String(name)}"`);
   }
 }

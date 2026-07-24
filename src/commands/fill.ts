@@ -5,14 +5,14 @@
  * deduplicated against the page's resolved plan; existing evals are never
  * touched. See ADR 01001.
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import pc from "picocolors";
 import { loadConfig } from "../core/config.js";
-import { discoverPages } from "../core/discover.js";
+import { discoverPages, leadingFrontmatterFormat } from "../core/discover.js";
 import { resolvePages, type ResolvedPagePlan } from "../core/resolve.js";
 import { appendPageEvals, type NewEvalEntry } from "../core/frontmatter-edit.js";
-import { costOfUsage, pricingFor } from "../judge/cost.js";
+import { costOfUsage, pricingFor, pricingOverrideFor } from "../judge/cost.js";
 import {
   makeProvider,
   resolveProviderIdentity,
@@ -126,13 +126,10 @@ export async function runFill(
       provider: options.provider,
       model: options.model,
     }));
-  const pricingOverride =
-    identity.name === "anthropic"
-      ? config.provider.anthropic.pricing
-      : identity.name === "openai"
-        ? config.provider.openai.pricing
-        : undefined;
-  const pricing = pricingFor(identity.model, pricingOverride);
+  const pricing = pricingFor(
+    identity.model,
+    pricingOverrideFor(config, identity.name),
+  );
 
   let costUsd = 0;
   const results: FillPageResult[] = [];
@@ -160,15 +157,15 @@ export async function runFill(
     if (plan.skip) return { ...base, status: "skipped" };
     const problem = plan.problems.find((p) => p.level === "error");
     if (problem) return { ...base, status: "error", error: problem.message };
-    const contentSansBom =
-      plan.page.content.charCodeAt(0) === 0xfeff
-        ? plan.page.content.slice(1)
-        : plan.page.content;
-    if (/^(\+\+\+|;;;)\r?\n/.test(contentSansBom)) {
+    // Reject non-YAML frontmatter before spending an LLM call: it can't be
+    // appended to (appendPageEvals would otherwise refuse) and there is
+    // nothing to fill.
+    const format = leadingFrontmatterFormat(plan.page.content);
+    if (format === "toml" || format === "json") {
       return {
         ...base,
         status: "error",
-        error: "only YAML frontmatter can be filled",
+        error: `only YAML frontmatter can be filled (found ${format} frontmatter)`,
       };
     }
 
@@ -218,17 +215,23 @@ export async function runFill(
       }
     }
 
-    const proposed = (raw.evals as ProposedEval[]).slice(0, maxEvals);
-    const taken = new Set(existingNames);
+    // Drop duplicates (against the resolved plan and within the batch) before
+    // applying the per-page cap, so duplicate names never crowd out fresh
+    // proposals.
+    const seen = new Set(existingNames);
     const duplicates: string[] = [];
-    const belowThreshold: ProposedEval[] = [];
-    const written: ProposedEval[] = [];
-    for (const p of proposed) {
-      if (taken.has(p.name)) {
+    const fresh: ProposedEval[] = [];
+    for (const p of raw.evals as ProposedEval[]) {
+      if (seen.has(p.name)) {
         duplicates.push(p.name);
         continue;
       }
-      taken.add(p.name);
+      seen.add(p.name);
+      fresh.push(p);
+    }
+    const belowThreshold: ProposedEval[] = [];
+    const written: ProposedEval[] = [];
+    for (const p of fresh.slice(0, maxEvals)) {
       if (p.confidence >= threshold) written.push(p);
       else belowThreshold.push(p);
     }
@@ -237,7 +240,7 @@ export async function runFill(
     if (written.length === 0) return result;
     try {
       const updated = appendPageEvals(
-        readFileSync(plan.page.absPath, "utf8"),
+        plan.page.content,
         plan.page.file,
         written.map(toEntry),
       );
