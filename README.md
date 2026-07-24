@@ -102,6 +102,21 @@ Generated scripts are ordinary version-controlled source — review them in PRs,
 
 `docevals promote` goes the other way: it reviews your llm-graded evals, asks the LLM which are actually expressible as code ("if you can express the eval criterion as code, do it"), and with `--write` converts them.
 
+## Proposing evals with `fill`
+
+Bootstrapping a corpus by hand is slow. `docevals fill` asks your configured LLM to propose evals for each page from its content, each with a self-reported 0–1 confidence:
+
+```console
+$ docevals fill --dry-run docs/tests/overview.mdx
+proposed docs/tests/overview.mdx  +3 evals (all-test-statuses-defined 0.90, test-hierarchy-explained 0.85, skip-conditions-enumerated 0.75) — dry run, not written
+
+Threshold: 0.7 · LLM cost: $0.0212
+```
+
+Only proposals at or above the threshold (default `0.7`, config `fill.confidenceThreshold` or `--confidence`) are appended to the page's frontmatter; the rest are reported. Existing evals are never modified — proposals whose names collide with the page's resolved plan (inline, referenced, or suite-expanded) are dropped as duplicates, and pages with `evals: {skip: true}` are skipped. Proposals are always llm-graded with explicit `examples`; use `promote`/`generate` to make them deterministic afterward.
+
+`fill` writes by default; `--dry-run` reports only. Raw proposals are cached (`.docevals/cache/fill/`) before gating, so re-running with a different `--confidence` costs nothing, and `fill.maxCostUsd` / `--max-cost` caps spend.
+
 ## Commands
 
 | Command | Purpose |
@@ -109,6 +124,7 @@ Generated scripts are ordinary version-controlled source — review them in PRs,
 | `docevals run [globs]` | Run all evals: deterministic graders first, then the LLM judge |
 | `docevals list` | Dry-run: show each page's resolved eval plan |
 | `docevals generate` | Generate scripts for command evals missing a command |
+| `docevals fill [--dry-run]` | Propose new frontmatter evals with an LLM, gated on confidence |
 | `docevals promote [--write]` | Convert llm evals that could be deterministic |
 | `docevals review <file> <eval> <pass\|fail>` | Record a human verdict for a needs-review eval |
 | `docevals calibrate` | Score the judge against a human-verified golden set |

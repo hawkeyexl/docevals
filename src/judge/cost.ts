@@ -26,6 +26,18 @@ export function pricingFor(
   return base ? PRICE_TABLE[base] : undefined;
 }
 
+/** Cost of a single provider response. Missing usage or pricing costs 0. */
+export function costOfUsage(
+  usage: { inputTokens: number; outputTokens: number } | undefined,
+  pricing?: Pricing,
+): number {
+  if (!usage || !pricing) return 0;
+  return (
+    (usage.inputTokens / 1_000_000) * pricing.inputPerMTok +
+    (usage.outputTokens / 1_000_000) * pricing.outputPerMTok
+  );
+}
+
 export function costOfRuns(runs: JudgeRun[], pricing?: Pricing): number {
   if (!pricing) return 0;
   let usd = 0;

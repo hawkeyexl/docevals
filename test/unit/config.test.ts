@@ -69,6 +69,54 @@ describe("parseConfig", () => {
     ).toThrow(/defaults\.suite "ghost"/);
   });
 
+  it("applies fill defaults for a minimal config", () => {
+    const c = parseConfig("version: 1\n", PATH);
+    expect(c.fill).toEqual({
+      confidenceThreshold: 0.7,
+      maxEvalsPerPage: 3,
+      temperature: 0,
+      cacheDir: ".docevals/cache/fill",
+      maxCostUsd: null,
+    });
+  });
+
+  it("respects explicit fill values", () => {
+    const c = parseConfig(
+      [
+        "version: 1",
+        "fill:",
+        "  confidenceThreshold: 0.9",
+        "  maxEvalsPerPage: 1",
+        "  temperature: 0.5",
+        "  cacheDir: .cache/fill",
+        "  maxCostUsd: 2",
+      ].join("\n"),
+      PATH,
+    );
+    expect(c.fill).toEqual({
+      confidenceThreshold: 0.9,
+      maxEvalsPerPage: 1,
+      temperature: 0.5,
+      cacheDir: ".cache/fill",
+      maxCostUsd: 2,
+    });
+  });
+
+  it("rejects unknown fill keys", () => {
+    expect(() =>
+      parseConfig(["version: 1", "fill:", "  bogus: true"].join("\n"), PATH),
+    ).toThrow(/Invalid config/);
+  });
+
+  it("rejects an out-of-range fill confidenceThreshold", () => {
+    expect(() =>
+      parseConfig(
+        ["version: 1", "fill:", "  confidenceThreshold: 1.5"].join("\n"),
+        PATH,
+      ),
+    ).toThrow(/Invalid config/);
+  });
+
   it("rejects invalid eval names", () => {
     expect(() =>
       parseConfig(

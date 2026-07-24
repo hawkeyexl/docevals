@@ -14,6 +14,7 @@ Every **behavior change** in docevals ships with an ADR here. The ADR records th
 | ADR | Title | Status |
 |---|---|---|
 | [01000](01000-publish-the-frontmatter-schema-from-this-repo.md) | Publish the frontmatter schema from this repo | accepted |
+| [01001](01001-fill-proposes-llm-evals-with-confidence-gating.md) | `fill` proposes llm-graded evals with a confidence gate | accepted |
 
 ## To backfill
 

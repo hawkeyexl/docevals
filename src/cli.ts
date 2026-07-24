@@ -8,6 +8,7 @@ import { DocevalsError } from "./types.js";
 import { runList, renderList } from "./commands/list.js";
 import { runRun } from "./commands/run.js";
 import { runGenerate } from "./commands/generate.js";
+import { runFill, renderFill } from "./commands/fill.js";
 import { runPromote } from "./commands/promote.js";
 import { listReviews, renderReviews, runReview } from "./commands/review.js";
 import { runCalibrate, renderCalibration } from "./commands/calibrate.js";
@@ -152,6 +153,46 @@ program
       }
     },
   );
+
+program
+  .command("fill")
+  .description(
+    "Propose frontmatter evals for pages with an LLM; writes proposals at or above the confidence threshold",
+  )
+  .argument("[globs...]", "File globs (default: config files.include)")
+  .option("-c, --config <path>", "Path to docevals.config.yaml")
+  .option("-f, --format <format>", "Output format: human | json", "human")
+  .option("--dry-run", "Report proposals without writing frontmatter")
+  .option(
+    "--confidence <n>",
+    "Minimum confidence to write (0-1, default: config fill.confidenceThreshold)",
+    parseFloatArg("--confidence"),
+  )
+  .option("--max-cost <usd>", "Stop proposing past this cost", parseFloatArg("--max-cost"))
+  .option("--no-cache", "Bypass the fill proposal cache")
+  .option("--provider <name>", "Provider: anthropic | openai | claude-cli")
+  .option("--model <model>", "Model override")
+  .action(async (globs: string[], opts: Record<string, unknown>) => {
+    try {
+      const confidence = opts.confidence as number | undefined;
+      if (confidence !== undefined && confidence > 1) {
+        fail(new DocevalsError(`--confidence must be between 0 and 1, got ${confidence}`));
+      }
+      const report = await runFill(globs, {
+        config: opts.config as string | undefined,
+        dryRun: opts.dryRun as boolean | undefined,
+        confidence,
+        maxCost: opts.maxCost as number | undefined,
+        noCache: opts.cache === false ? true : undefined,
+        provider: opts.provider as string | undefined,
+        model: opts.model as string | undefined,
+      });
+      console.log(renderFill(report, opts.format as "human" | "json"));
+      process.exitCode = report.exitCode;
+    } catch (e) {
+      fail(e);
+    }
+  });
 
 program
   .command("promote")

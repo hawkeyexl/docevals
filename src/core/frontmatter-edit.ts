@@ -146,6 +146,100 @@ export function updateConfigEval(
   return doc.toString();
 }
 
+export interface NewEvalEntry {
+  name: string;
+  assertion: string;
+  type?: string;
+  grader?: string;
+  evidence?: string;
+  examples?: { pass: string; fail: string };
+  severity?: string;
+}
+
+/** Ordered plain object for a new inline eval, with undefined fields dropped. */
+function entryObject(entry: NewEvalEntry): Record<string, unknown> {
+  const obj: Record<string, unknown> = { name: entry.name, assertion: entry.assertion };
+  if (entry.type !== undefined) obj.type = entry.type;
+  if (entry.grader !== undefined) obj.grader = entry.grader;
+  if (entry.evidence !== undefined) obj.evidence = entry.evidence;
+  if (entry.examples !== undefined) obj.examples = entry.examples;
+  if (entry.severity !== undefined) obj.severity = entry.severity;
+  return obj;
+}
+
+function assertNoCollision(seq: YAMLSeq, name: string, path: string): void {
+  for (const item of seq.items) {
+    const existing = isMap(item)
+      ? item.get("name") ?? item.get("use")
+      : isScalar(item)
+        ? item.value
+        : undefined;
+    if (existing === name) {
+      throw new DocevalsError(
+        `${path}: eval "${name}" already exists in frontmatter`,
+      );
+    }
+  }
+}
+
+/**
+ * Append inline evals to a page's YAML frontmatter, creating the `evals` key
+ * — or the frontmatter block itself — when missing. The body stays
+ * byte-identical; existing evals are never modified or reordered.
+ */
+export function appendPageEvals(
+  content: string,
+  path: string,
+  entries: NewEvalEntry[],
+): string {
+  const bom = content.charCodeAt(0) === 0xfeff ? content[0]! : "";
+  const stripped = bom ? content.slice(1) : content;
+  const eol: "\n" | "\r\n" = stripped.includes("\r\n") ? "\r\n" : "\n";
+
+  if (!/^---\r?\n/.test(stripped)) {
+    // No frontmatter: synthesize a block above the untouched body.
+    const doc = new Document({ evals: entries.map(entryObject) });
+    let block = doc.toString();
+    if (eol === "\r\n") block = block.replace(/(?<!\r)\n/g, "\r\n");
+    return `${bom}---${eol}${block}---${eol}${stripped}`;
+  }
+
+  const { open, block, suffix, eol: blockEol } = splitYamlFrontmatter(content, path);
+  const doc = parseDocument(block);
+  if (doc.errors.length > 0) {
+    throw new DocevalsError(
+      `${path}: cannot edit frontmatter — ${doc.errors[0]?.message ?? "parse error"}`,
+    );
+  }
+
+  let seq = evalSeq(doc);
+  if (!seq) {
+    seq = new YAMLSeq();
+    const node = doc.get("evals", true);
+    if (node === undefined) {
+      doc.set("evals", seq);
+    } else if (isMap(node)) {
+      if (node.get("evals", true) !== undefined) {
+        throw new DocevalsError(
+          `${path}: the evals list in frontmatter is not a sequence`,
+        );
+      }
+      node.set("evals", seq);
+    } else {
+      throw new DocevalsError(
+        `${path}: the evals key in frontmatter is neither a list nor an object`,
+      );
+    }
+  }
+  for (const entry of entries) {
+    assertNoCollision(seq, entry.name, path);
+    seq.add(doc.createNode(entryObject(entry)));
+  }
+  let newBlock = doc.toString();
+  if (blockEol === "\r\n") newBlock = newBlock.replace(/(?<!\r)\n/g, "\r\n");
+  return open + newBlock + suffix;
+}
+
 /** True when the eval exists as an editable (map) entry in the frontmatter. */
 export function hasEditableEval(content: string, evalName: string): boolean {
   try {
