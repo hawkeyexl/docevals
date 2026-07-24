@@ -67,6 +67,13 @@ export interface DocevalsConfig {
     allowFrontmatterCommands: boolean;
     timeoutMs: number;
   };
+  fill: {
+    confidenceThreshold: number;
+    maxEvalsPerPage: number;
+    temperature: number;
+    cacheDir: string;
+    maxCostUsd: number | null;
+  };
   evals: Record<string, EvalDef>;
   suites: Record<string, SuiteDef>;
   /** Absolute path of the loaded config file. */
@@ -164,6 +171,13 @@ export function parseConfig(text: string, configPath: string): DocevalsConfig {
       configDir: r.scripts?.configDir ?? "docevals-scripts",
       allowFrontmatterCommands: r.scripts?.allowFrontmatterCommands ?? true,
       timeoutMs: r.scripts?.timeoutMs ?? 30000,
+    },
+    fill: {
+      confidenceThreshold: r.fill?.confidenceThreshold ?? 0.7,
+      maxEvalsPerPage: r.fill?.maxEvalsPerPage ?? 3,
+      temperature: r.fill?.temperature ?? 0,
+      cacheDir: r.fill?.cacheDir ?? ".docevals/cache/fill",
+      maxCostUsd: r.fill?.maxCostUsd ?? null,
     },
     evals: (r.evals ?? {}) as Record<string, EvalDef>,
     suites,

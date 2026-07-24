@@ -85,6 +85,17 @@
       },
       "additionalProperties": false
     },
+    "fill": {
+      "type": "object",
+      "properties": {
+        "confidenceThreshold": { "type": "number", "minimum": 0, "maximum": 1 },
+        "maxEvalsPerPage": { "type": "integer", "minimum": 1 },
+        "temperature": { "type": "number", "minimum": 0 },
+        "cacheDir": { "type": "string" },
+        "maxCostUsd": { "type": ["number", "null"], "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
     "evals": {
       "type": "object",
       "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]*$" },

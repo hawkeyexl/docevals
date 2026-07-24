@@ -23,11 +23,25 @@ export interface PageFile {
   extractError?: string;
 }
 
-const FENCES: { open: RegExp; isClose: (l: string) => boolean }[] = [
-  { open: /^---\r?\n/, isClose: (l) => l === "---" || l === "..." },
-  { open: /^\+\+\+\r?\n/, isClose: (l) => l === "+++" },
-  { open: /^;;;\r?\n/, isClose: (l) => l === ";;;" },
+export type FrontmatterFormat = "yaml" | "toml" | "json";
+
+const FENCES: {
+  format: FrontmatterFormat;
+  open: RegExp;
+  isClose: (l: string) => boolean;
+}[] = [
+  { format: "yaml", open: /^---\r?\n/, isClose: (l) => l === "---" || l === "..." },
+  { format: "toml", open: /^\+\+\+\r?\n/, isClose: (l) => l === "+++" },
+  { format: "json", open: /^;;;\r?\n/, isClose: (l) => l === ";;;" },
 ];
+
+/** The frontmatter format a page opens with, or undefined if it has none. */
+export function leadingFrontmatterFormat(
+  content: string,
+): FrontmatterFormat | undefined {
+  const body = content.charCodeAt(0) === 0xfeff ? content.slice(1) : content;
+  return FENCES.find((f) => f.open.test(body))?.format;
+}
 
 /** Remove a leading fenced frontmatter block, mirroring docmeta's fence rules. */
 export function stripFrontmatterBlock(content: string): string {

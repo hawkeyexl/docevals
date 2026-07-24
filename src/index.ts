@@ -32,6 +32,23 @@ export {
 } from "./commands/review.js";
 export { runGenerate } from "./commands/generate.js";
 export type { GenerateOptions, GenerateRun } from "./commands/generate.js";
+export { runFill, renderFill } from "./commands/fill.js";
+export type {
+  FillOptions,
+  FillReport,
+  FillPageResult,
+  FillStatus,
+  ProposedEval,
+} from "./commands/fill.js";
+export {
+  FILL_PROMPT_VERSION,
+  FILL_SYSTEM_PROMPT,
+  MAX_BODY_CHARS,
+  PROPOSAL_SCHEMA,
+  buildFillUser,
+  isValidProposal,
+} from "./fill/prompt.js";
+export { FillCache, fillCacheKey } from "./fill/cache.js";
 export { runPromote } from "./commands/promote.js";
 export type { PromoteOptions, PromoteProposal } from "./commands/promote.js";
 export { makeGenerateScripts, scriptLocationFor } from "./graders/scriptgen.js";
@@ -47,7 +64,9 @@ export type { Grader, GraderContext, GraderTarget, ExecFn } from "./graders/type
 export {
   updatePageEval,
   updateConfigEval,
+  appendPageEvals,
 } from "./core/frontmatter-edit.js";
+export type { NewEvalEntry } from "./core/frontmatter-edit.js";
 export {
   frontmatterSchema,
   frontmatterSchemaPath,

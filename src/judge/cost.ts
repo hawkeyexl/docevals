@@ -4,7 +4,7 @@
  * never a guess.
  */
 import type { JudgeRun } from "../types.js";
-import type { Pricing } from "../core/config.js";
+import type { DocevalsConfig, Pricing } from "../core/config.js";
 
 /** USD per million tokens. Keep entries pinned-model-specific. */
 const PRICE_TABLE: Record<string, Pricing> = {
@@ -15,6 +15,20 @@ const PRICE_TABLE: Record<string, Pricing> = {
   "gpt-4o": { inputPerMTok: 2.5, outputPerMTok: 10 },
 };
 
+/**
+ * The pricing override configured for a provider, if it carries one. Only
+ * anthropic/openai are configured with pricing; claude-cli reports no usage
+ * and other providers (e.g. the mock) aren't configured at all.
+ */
+export function pricingOverrideFor(
+  config: DocevalsConfig,
+  providerName: string,
+): Pricing | undefined {
+  if (providerName === "anthropic") return config.provider.anthropic.pricing;
+  if (providerName === "openai") return config.provider.openai.pricing;
+  return undefined;
+}
+
 export function pricingFor(
   model: string,
   override?: Pricing,
@@ -24,6 +38,18 @@ export function pricingFor(
   // Match pinned variants like claude-sonnet-4-5-20250929.
   const base = Object.keys(PRICE_TABLE).find((k) => model.startsWith(k));
   return base ? PRICE_TABLE[base] : undefined;
+}
+
+/** Cost of a single provider response. Missing usage or pricing costs 0. */
+export function costOfUsage(
+  usage: { inputTokens: number; outputTokens: number } | undefined,
+  pricing?: Pricing,
+): number {
+  if (!usage || !pricing) return 0;
+  return (
+    (usage.inputTokens / 1_000_000) * pricing.inputPerMTok +
+    (usage.outputTokens / 1_000_000) * pricing.outputPerMTok
+  );
 }
 
 export function costOfRuns(runs: JudgeRun[], pricing?: Pricing): number {

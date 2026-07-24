@@ -14,7 +14,7 @@ import { computeConsensus } from "../core/consensus.js";
 import { zoneFor } from "../core/zones.js";
 import { findReview, loadReviews } from "../core/reviews.js";
 import { JudgeCache, cacheKey } from "./cache.js";
-import { costOfRuns, pricingFor } from "./cost.js";
+import { costOfRuns, pricingFor, pricingOverrideFor } from "./cost.js";
 import { JUDGE_SYSTEM_PROMPT, buildUserContent } from "./prompt.js";
 import type { JudgeProvider } from "./types.js";
 import { resolve as resolvePath } from "node:path";
@@ -87,14 +87,10 @@ export function makeJudge(deps: JudgeStageDeps): JudgeFn {
       resolvePath(root, config.judge.cacheDir),
       options.noCache !== true,
     );
-    // Only anthropic/openai carry a pricing override; claude-cli reports no
-    // token usage and other providers (e.g. the mock) aren't configured at all.
-    const providerName = provider.provider();
-    const priced =
-      providerName === "anthropic" || providerName === "openai"
-        ? config.provider[providerName]
-        : undefined;
-    const pricing = pricingFor(provider.modelName(), priced?.pricing);
+    const pricing = pricingFor(
+      provider.modelName(),
+      pricingOverrideFor(config, provider.provider()),
+    );
     const reviews = loadReviews(root);
     const maxCostUsd = options.maxCostUsd ?? config.judge.maxCostUsd;
     let spentUsd = 0;

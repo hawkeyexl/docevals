@@ -169,6 +169,7 @@ Note that vitest and node write diagnostics, including failures, to stderr — `
 - Deterministic evals fail only on `error`-severity findings; warnings and info report but pass.
 - Exit codes: `0` pass, `1` any fail/error/suite-miss, `2` operational (`DocevalsError`).
 - Bump `PROMPT_VERSION` (`src/judge/prompt.ts`) whenever judge prompts change — it is part of the cache key, and stale cached verdicts otherwise survive a prompt revision.
+- Bump `FILL_PROMPT_VERSION` (`src/fill/prompt.ts`) whenever the fill prompt or `PROPOSAL_SCHEMA` changes — it is part of the fill cache key, and stale cached proposals otherwise survive a prompt revision (the exact analog of `PROMPT_VERSION`).
 - Script generation must leave the page byte-identical outside the edited frontmatter node.
 - Frontmatter-declared commands are arbitrary code execution driven by content files. Any change near command graders or script generation must preserve the `scripts.allowFrontmatterCommands` config and `--no-frontmatter-commands` flag gate.
 - `schemas/frontmatter-0.1.json` is a **published artifact**, not internal source: it ships in the package (`files`/`exports`) and consumers point their validator at it by path. Keep the `$id` a resolvable URL, and pin its behavior in `test/unit/schema.test.ts`.
