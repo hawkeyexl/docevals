@@ -5,7 +5,7 @@
  * needs-review outcomes for unchanged pages.
  *
  * The ensemble mechanics — retry-once, errored runs counting against
- * consensus, cache replay — live in `@hawkeyexl/inference` (ADR 01001). What
+ * consensus, cache replay — live in `@hawkeyexl/inference` (ADR 01002). What
  * stays here is docevals' own orchestration: the bounded-concurrency pool
  * across targets, the cost budget, the self-judgment warning, and human-review
  * resolution.
@@ -35,7 +35,8 @@ import { resolve as resolvePath } from "node:path";
  * docevals' own verdict wording. Structurally identical to the library's
  * canonical schema, but the field descriptions talk about pages rather than
  * generic subjects — and descriptions are prompt surface that steers the
- * model, so they are worth keeping (inference ADR 01001).
+ * model, so they are worth keeping (the inference library's own ADR 01001,
+ * not this repo's).
  */
 const verdictSchema = verdictSchemaJson as Record<string, unknown>;
 

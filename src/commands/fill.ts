@@ -129,9 +129,19 @@ export async function runFill(
       provider: options.provider,
       model: options.model,
     }));
+  // The configured override belongs to the *configured* provider. An injected
+  // instance (the test seam, or programmatic use) may be an entirely different
+  // provider and model, so applying the override to it would invent a price
+  // for something it was never written for — a mock run would report non-zero
+  // cost. Fall back to the built-in table in that case.
   const pricing = pricingFor(
     identity.model,
-    providerSpecFor(config, { provider: options.provider, model: options.model }).pricing,
+    options.providerInstance
+      ? undefined
+      : providerSpecFor(config, {
+          provider: options.provider,
+          model: options.model,
+        }).pricing,
   );
 
   let costUsd = 0;
