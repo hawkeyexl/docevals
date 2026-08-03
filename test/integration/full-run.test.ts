@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { runEvals } from "../../src/core/engine.js";
 import { makeJudge } from "../../src/judge/judge.js";
-import { MockProvider, mockVerdict } from "../../src/judge/providers/mock.js";
+import { MockProvider, mockVerdict } from "@hawkeyexl/inference";
 import { parseConfig } from "../../src/core/config.js";
 import { readFileSync } from "node:fs";
 

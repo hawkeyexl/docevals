@@ -1,0 +1,130 @@
+/**
+ * The config → ProviderSpec mapping. The providers themselves are the shared
+ * inference library's and are tested there; what docevals still owns is which
+ * of its own config keys mean what, so that is what these pin.
+ */
+import { afterEach, describe, expect, it } from "vitest";
+import { resolveProviderIdentity as resolveLibIdentity } from "@hawkeyexl/inference";
+import { parseConfig } from "../../src/core/config.js";
+import {
+  makeProvider,
+  providerSpecFor,
+  resolveProviderIdentity,
+} from "../../src/judge/provider.js";
+import { DocevalsError } from "../../src/types.js";
+
+const PATH = "/fake/docevals.config.yaml";
+const ORIGINAL_ENV = { ...process.env };
+
+afterEach(() => {
+  process.env = { ...ORIGINAL_ENV };
+});
+
+describe("providerSpecFor", () => {
+  it("maps the anthropic section and keeps a verdict-shaped tool name", () => {
+    const config = parseConfig(
+      "version: 1\nprovider:\n  default: anthropic\n  anthropic:\n    model: claude-haiku-4-5\n    apiKeyEnv: MY_KEY\n",
+      PATH,
+    );
+    const spec = providerSpecFor(config);
+    expect(spec.provider).toBe("anthropic");
+    expect(spec.model).toBe("claude-haiku-4-5");
+    expect(spec.apiKeyEnv).toBe("MY_KEY");
+    // The forced tool's name is prompt surface; a verdict-shaped one steers
+    // the model better than the library's generic default.
+    expect(spec.anthropic?.toolName).toBe("record_verdict");
+  });
+
+  it("maps the openai section including baseUrl", () => {
+    const config = parseConfig(
+      "version: 1\nprovider:\n  openai:\n    baseUrl: http://localhost:11434/v1\n    model: qwen2.5\n",
+      PATH,
+    );
+    const spec = providerSpecFor(config, { provider: "openai" });
+    expect(spec.baseUrl).toBe("http://localhost:11434/v1");
+    expect(spec.model).toBe("qwen2.5");
+  });
+
+  it("maps the claude-cli section including the command", () => {
+    const config = parseConfig(
+      "version: 1\nprovider:\n  claude-cli:\n    command: claude-next\n",
+      PATH,
+    );
+    expect(providerSpecFor(config, { provider: "claude-cli" }).command).toBe(
+      "claude-next",
+    );
+  });
+
+  it("carries a configured pricing override onto the spec", () => {
+    const config = parseConfig(
+      "version: 1\nprovider:\n  anthropic:\n    pricing:\n      inputPerMTok: 1\n      outputPerMTok: 2\n",
+      PATH,
+    );
+    expect(providerSpecFor(config).pricing).toEqual({
+      inputPerMTok: 1,
+      outputPerMTok: 2,
+    });
+  });
+
+  it("omits pricing entirely when none is configured", () => {
+    const config = parseConfig("version: 1\n", PATH);
+    expect("pricing" in providerSpecFor(config)).toBe(false);
+  });
+
+  it("lets a CLI --model override the configured model", () => {
+    const config = parseConfig("version: 1\n", PATH);
+    expect(providerSpecFor(config, { model: "gpt-4o" }).model).toBe("gpt-4o");
+  });
+
+  it("rejects an unknown provider name", () => {
+    const config = parseConfig("version: 1\n", PATH);
+    expect(() => providerSpecFor(config, { provider: "gemini" as never })).toThrow(
+      DocevalsError,
+    );
+  });
+});
+
+describe("resolveProviderIdentity", () => {
+  it("resolves identity without constructing the provider or needing a key", () => {
+    delete process.env["ANTHROPIC_API_KEY"];
+    const config = parseConfig("version: 1\n", PATH);
+    expect(resolveProviderIdentity(config)).toEqual({
+      provider: "anthropic",
+      model: "claude-sonnet-4-5",
+    });
+  });
+
+  it("agrees with the library's resolver for every configured provider", () => {
+    const config = parseConfig("version: 1\n", PATH);
+    for (const name of ["anthropic", "openai", "claude-cli"] as const) {
+      const spec = providerSpecFor(config, { provider: name });
+      expect(resolveProviderIdentity(config, { provider: name })).toEqual(
+        resolveLibIdentity(spec),
+      );
+    }
+  });
+});
+
+describe("makeProvider", () => {
+  it("constructs the configured provider", () => {
+    process.env["ANTHROPIC_API_KEY"] = "test-key";
+    const config = parseConfig("version: 1\n", PATH);
+    expect(makeProvider(config).provider()).toBe("anthropic");
+  });
+
+  it("surfaces a missing API key rather than failing later mid-run", () => {
+    delete process.env["ANTHROPIC_API_KEY"];
+    const config = parseConfig("version: 1\n", PATH);
+    expect(() => makeProvider(config)).toThrow(/ANTHROPIC_API_KEY/);
+  });
+
+  it("honours a custom apiKeyEnv", () => {
+    delete process.env["ANTHROPIC_API_KEY"];
+    process.env["MY_KEY"] = "test-key";
+    const config = parseConfig(
+      "version: 1\nprovider:\n  anthropic:\n    apiKeyEnv: MY_KEY\n",
+      PATH,
+    );
+    expect(makeProvider(config).provider()).toBe("anthropic");
+  });
+});

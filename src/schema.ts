@@ -3,12 +3,12 @@
  * rather than registering it as a built-in inside a validator — consumers
  * point their validator at the shipped file (or import the object directly).
  *
- *   docmeta validate --schema node_modules/docevals/schemas/frontmatter-0.1.json docs/
+ *   docmeta validate --schema node_modules/@hawkeyexl/docevals/schemas/frontmatter-0.1.json docs/
  *
  * In a docevals config, a `tool:docmeta` eval references it the same way:
  *
  *   options:
- *     schemas: ["node_modules/docevals/schemas/frontmatter-0.1.json"]
+ *     schemas: ["node_modules/@hawkeyexl/docevals/schemas/frontmatter-0.1.json"]
  */
 import { fileURLToPath } from "node:url";
 import schema from "../schemas/frontmatter-0.1.json" with { type: "json" };

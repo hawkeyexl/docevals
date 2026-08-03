@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { computeConsensus } from "../../src/core/consensus.js";
 import { zoneFor } from "../../src/core/zones.js";
 import { makeJudge } from "../../src/judge/judge.js";
-import { MockProvider, mockVerdict } from "../../src/judge/providers/mock.js";
+import { MockProvider, mockVerdict } from "@hawkeyexl/inference";
 import { parseConfig } from "../../src/core/config.js";
 import { resolvePage } from "../../src/core/resolve.js";
 import { recordReview } from "../../src/core/reviews.js";

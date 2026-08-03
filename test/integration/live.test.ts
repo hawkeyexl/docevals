@@ -14,7 +14,7 @@ import { join, resolve } from "node:path";
 import { runEvals } from "../../src/core/engine.js";
 import { makeJudge } from "../../src/judge/judge.js";
 import { makeGenerateScripts } from "../../src/graders/scriptgen.js";
-import { ClaudeCliProvider } from "../../src/judge/providers/claude-cli.js";
+import { ClaudeCliProvider } from "@hawkeyexl/inference";
 
 const ROOT = resolve(import.meta.dirname, "../..");
 const LIVE = process.env.DOCEVALS_LIVE === "1";

@@ -8,7 +8,7 @@ import {
   hasEditableEval,
 } from "../../src/core/frontmatter-edit.js";
 import { makeGenerateScripts, scriptLocationFor } from "../../src/graders/scriptgen.js";
-import { MockProvider } from "../../src/judge/providers/mock.js";
+import { MockProvider } from "@hawkeyexl/inference";
 import { parseConfig } from "../../src/core/config.js";
 import { readPage } from "../../src/core/discover.js";
 import { resolvePage } from "../../src/core/resolve.js";

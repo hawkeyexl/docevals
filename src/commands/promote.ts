@@ -15,8 +15,8 @@ import {
   updatePageEval,
 } from "../core/frontmatter-edit.js";
 import { sha256 } from "../judge/cache.js";
-import { makeProvider } from "../judge/providers/index.js";
-import type { JudgeProvider } from "../judge/types.js";
+import { makeProvider } from "../judge/provider.js";
+import type { InferenceProvider } from "@hawkeyexl/inference";
 import {
   SCRIPTGEN_SYSTEM_PROMPT,
   buildScriptgenUser,
@@ -73,7 +73,7 @@ export interface PromoteProposal {
 }
 
 async function assess(
-  provider: JudgeProvider,
+  provider: InferenceProvider,
   target: GraderTarget,
 ): Promise<{ promotable: boolean; rationale: string; code?: string }> {
   try {

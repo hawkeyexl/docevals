@@ -3,68 +3,44 @@
  * request with no shared context (eval isolation), aggregated by consensus
  * and routed through confidence zones. Persisted human reviews resolve
  * needs-review outcomes for unchanged pages.
+ *
+ * The ensemble mechanics — retry-once, errored runs counting against
+ * consensus, cache replay — live in `@hawkeyexl/inference` (ADR 01001). What
+ * stays here is docevals' own orchestration: the bounded-concurrency pool
+ * across targets, the cost budget, the self-judgment warning, and human-review
+ * resolution.
  */
-import { Ajv2020 } from "ajv/dist/2020.js";
-import verdictSchema from "./verdict-schema.json" with { type: "json" };
-import type { EvalResult, JudgeRun, JudgeVerdict } from "../types.js";
+import {
+  JsonCache,
+  computeConsensus,
+  costOfRuns,
+  pricingFor,
+  runEnsemble,
+  zoneFor,
+  type InferenceProvider,
+  type JudgeRun,
+} from "@hawkeyexl/inference";
+import verdictSchemaJson from "./verdict-schema.json" with { type: "json" };
+import type { EvalResult } from "../types.js";
 import type { DocevalsConfig } from "../core/config.js";
 import type { JudgeFn, JudgeOptions } from "../core/engine.js";
 import type { GraderTarget } from "../graders/types.js";
-import { computeConsensus } from "../core/consensus.js";
-import { zoneFor } from "../core/zones.js";
 import { findReview, loadReviews } from "../core/reviews.js";
-import { JudgeCache, cacheKey } from "./cache.js";
-import { costOfRuns, pricingFor, pricingOverrideFor } from "./cost.js";
+import { cacheKey } from "./cache.js";
 import { JUDGE_SYSTEM_PROMPT, buildUserContent } from "./prompt.js";
-import type { JudgeProvider } from "./types.js";
+import { providerSpecFor } from "./provider.js";
 import { resolve as resolvePath } from "node:path";
 
-const ajv = new Ajv2020({ allErrors: true });
-const validateVerdict = ajv.compile(verdictSchema);
-
-async function singleRun(
-  provider: JudgeProvider,
-  system: string,
-  user: string,
-  temperature: number,
-): Promise<JudgeRun> {
-  const start = Date.now();
-  const base = {
-    provider: provider.provider(),
-    model: provider.modelName(),
-    cached: false,
-  };
-  // One retry on invalid JSON, then the run records as an error. An errored
-  // run counts against consensus — it can never produce a silent pass.
-  let lastError = "unknown error";
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const response = await provider.completeJSON({
-        system,
-        user,
-        schema: verdictSchema as Record<string, unknown>,
-        temperature,
-      });
-      if (validateVerdict(response.json)) {
-        return {
-          ...base,
-          verdict: response.json as unknown as JudgeVerdict,
-          usage: response.usage,
-          durationMs: Date.now() - start,
-        };
-      }
-      lastError = `Verdict failed schema validation: ${(validateVerdict.errors ?? [])
-        .map((e) => `${e.instancePath} ${e.message}`)
-        .join("; ")}`;
-    } catch (e) {
-      lastError = e instanceof Error ? e.message : String(e);
-    }
-  }
-  return { ...base, error: lastError, durationMs: Date.now() - start };
-}
+/**
+ * docevals' own verdict wording. Structurally identical to the library's
+ * canonical schema, but the field descriptions talk about pages rather than
+ * generic subjects — and descriptions are prompt surface that steers the
+ * model, so they are worth keeping (inference ADR 01001).
+ */
+const verdictSchema = verdictSchemaJson as Record<string, unknown>;
 
 export interface JudgeStageDeps {
-  provider: JudgeProvider;
+  provider: InferenceProvider;
   root: string;
 }
 
@@ -78,18 +54,16 @@ export function makeJudge(deps: JudgeStageDeps): JudgeFn {
     const { provider, root } = deps;
     const runsPerEval = options.runs ?? config.judge.ensembleRuns;
     const temperature = config.judge.temperature;
-    if (temperature > 0) {
-      console.warn(
-        `docevals: judge.temperature is ${temperature} — nonzero temperature adds noise to verdicts; 0 is strongly recommended.`,
-      );
-    }
-    const cache = new JudgeCache(
+    const cache = new JsonCache<JudgeRun[]>(
       resolvePath(root, config.judge.cacheDir),
       options.noCache !== true,
+      "docevals",
     );
+    // Pricing overrides ride on the provider spec, so the same mapping that
+    // builds the provider also answers what its model costs.
     const pricing = pricingFor(
       provider.modelName(),
-      pricingOverrideFor(config, provider.provider()),
+      providerSpecFor(config, options).pricing,
     );
     const reviews = loadReviews(root);
     const maxCostUsd = options.maxCostUsd ?? config.judge.maxCostUsd;
@@ -127,25 +101,24 @@ export function makeJudge(deps: JudgeStageDeps): JudgeFn {
         };
       }
 
-      const key = cacheKey(
-        provider.provider(),
-        provider.modelName(),
-        runsPerEval,
+      const runs = await runEnsemble({
+        provider,
+        system: JUDGE_SYSTEM_PROMPT,
+        user: buildUserContent(ev, plan.page.body),
+        runs: runsPerEval,
         temperature,
-        plan.page.body,
-        ev,
-      );
-      let runs = cache.get(key);
-      if (!runs) {
-        const user = buildUserContent(ev, plan.page.body);
-        runs = [];
-        for (let i = 0; i < runsPerEval; i++) {
-          runs.push(
-            await singleRun(provider, JUDGE_SYSTEM_PROMPT, user, temperature),
-          );
-        }
-        cache.set(key, runs);
-      }
+        schema: verdictSchema,
+        cache,
+        cacheKey: cacheKey(
+          provider.provider(),
+          provider.modelName(),
+          runsPerEval,
+          temperature,
+          plan.page.body,
+          ev,
+        ),
+        label: "docevals",
+      });
 
       const consensusBase = computeConsensus(runs);
       const zone = zoneFor(consensusBase, config.judge.zones);

@@ -7,11 +7,24 @@
  * binary judgments, they are never assigned per item.
  */
 
-/** A single judge run's match verdict. `partial` counts as fail for the binary outcome. */
-export type Match = "pass" | "fail" | "partial";
+// The judge vocabulary is shared with the inference layer and is re-exported
+// here so docevals code and its consumers keep one import site. A second local
+// definition would be a second thing to keep in sync.
+//
+//   Match          — a single run's verdict; `partial` counts as fail
+//   Zone           — confidence-zone routing for LLM-judged evals
+//   JudgeVerdict   — the structured verdict of one run (the book's shape)
+//   JudgeRun       — one run within an ensemble
+//   ConsensusResult — the aggregated outcome for one (page, eval) pair
+import type { ConsensusResult } from "@hawkeyexl/inference";
 
-/** Confidence-zone routing for LLM-judged evals. */
-export type Zone = "auto-pass" | "auto-fail" | "human-review";
+export type {
+  ConsensusResult,
+  JudgeRun,
+  JudgeVerdict,
+  Match,
+  Zone,
+} from "@hawkeyexl/inference";
 
 /**
  * Regression evals guard behavior that must keep working (~100% target pass
@@ -24,43 +37,6 @@ export type Severity = "error" | "warning" | "info";
 
 /** How an eval is graded. `tool:*` kinds are built-in adapters for external tools. */
 export type GraderKind = "llm" | "command" | "human" | `tool:${string}`;
-
-/** Structured verdict returned by a single LLM judge run (exact book shape). */
-export interface JudgeVerdict {
-  /** The specific documented assertion under evaluation. */
-  claim: string;
-  /** What the judge actually observed in the page. */
-  observed: string;
-  match: Match;
-  /** 0.0–1.0 self-reported confidence. */
-  confidence: number;
-  reasoning: string;
-}
-
-/** One run within an ensemble. */
-export interface JudgeRun {
-  /** Absent when the run errored (invalid JSON after retry, API failure). */
-  verdict?: JudgeVerdict;
-  error?: string;
-  provider: string;
-  model: string;
-  cached: boolean;
-  usage?: { inputTokens: number; outputTokens: number };
-  durationMs: number;
-}
-
-/** Aggregated outcome of an ensemble of judge runs for one (page, eval) pair. */
-export interface ConsensusResult {
-  runs: JudgeRun[];
-  votes: { pass: number; fail: number; partial: number; error: number };
-  /** Majority verdict; `partial` counts as fail for the binary outcome. */
-  verdict: Match;
-  /** Fraction of non-errored runs agreeing with the majority verdict. */
-  agreement: number;
-  /** Mean confidence across non-errored runs. */
-  meanConfidence: number;
-  zone: Zone;
-}
 
 /** A normalized finding from a deterministically graded eval (command or tool). */
 export interface Finding {

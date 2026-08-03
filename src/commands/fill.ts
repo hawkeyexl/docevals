@@ -12,12 +12,13 @@ import { loadConfig } from "../core/config.js";
 import { discoverPages, leadingFrontmatterFormat } from "../core/discover.js";
 import { resolvePages, type ResolvedPagePlan } from "../core/resolve.js";
 import { appendPageEvals, type NewEvalEntry } from "../core/frontmatter-edit.js";
-import { costOfUsage, pricingFor, pricingOverrideFor } from "../judge/cost.js";
+import { costOfUsage, pricingFor } from "@hawkeyexl/inference";
 import {
   makeProvider,
+  providerSpecFor,
   resolveProviderIdentity,
-} from "../judge/providers/index.js";
-import type { JudgeProvider } from "../judge/types.js";
+} from "../judge/provider.js";
+import type { InferenceProvider } from "@hawkeyexl/inference";
 import { FillCache, fillCacheKey } from "../fill/cache.js";
 import {
   FILL_SYSTEM_PROMPT,
@@ -39,7 +40,7 @@ export interface FillOptions {
   provider?: string;
   model?: string;
   /** Test seam: bypasses provider construction entirely. */
-  providerInstance?: JudgeProvider;
+  providerInstance?: InferenceProvider;
 }
 
 export type FillStatus =
@@ -118,7 +119,7 @@ export async function runFill(
   // or all-skipped runs need no API key.
   let provider = options.providerInstance;
   const identity = provider
-    ? { name: provider.provider(), model: provider.modelName() }
+    ? { provider: provider.provider(), model: provider.modelName() }
     : resolveProviderIdentity(config, {
         provider: options.provider,
         model: options.model,
@@ -130,7 +131,7 @@ export async function runFill(
     }));
   const pricing = pricingFor(
     identity.model,
-    pricingOverrideFor(config, identity.name),
+    providerSpecFor(config, { provider: options.provider, model: options.model }).pricing,
   );
 
   let costUsd = 0;
@@ -178,7 +179,7 @@ export async function runFill(
     }));
     const existingNames = existing.map((e) => e.name).sort();
     const key = fillCacheKey(
-      identity.name,
+      identity.provider,
       identity.model,
       temperature,
       maxEvals,

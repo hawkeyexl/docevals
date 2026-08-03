@@ -12,7 +12,7 @@ import type { DocevalsConfig } from "../core/config.js";
 import type { GenerateFn, JudgeOptions } from "../core/engine.js";
 import { updateConfigEval, updatePageEval } from "../core/frontmatter-edit.js";
 import { sha256 } from "../judge/cache.js";
-import type { JudgeProvider } from "../judge/types.js";
+import type { InferenceProvider } from "@hawkeyexl/inference";
 import type { GraderTarget } from "./types.js";
 
 export const SCRIPTGEN_VERSION = 1;
@@ -113,7 +113,7 @@ function header(assertion: string, evalName: string): string {
 }
 
 export interface ScriptgenDeps {
-  provider: JudgeProvider;
+  provider: InferenceProvider;
   root: string;
 }
 

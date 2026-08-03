@@ -8,7 +8,7 @@ import { cpSync, copyFileSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { runFill } from "../../src/commands/fill.js";
-import { MockProvider } from "../../src/judge/providers/mock.js";
+import { MockProvider } from "@hawkeyexl/inference";
 import { loadConfig } from "../../src/core/config.js";
 import { discoverPages } from "../../src/core/discover.js";
 import { resolvePages } from "../../src/core/resolve.js";

@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { renderFill, runFill } from "../../src/commands/fill.js";
-import { MockProvider } from "../../src/judge/providers/mock.js";
+import { MockProvider } from "@hawkeyexl/inference";
 import { readPage } from "../../src/core/discover.js";
 import { resolvePage } from "../../src/core/resolve.js";
 import { loadConfig } from "../../src/core/config.js";
