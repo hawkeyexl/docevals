@@ -17,8 +17,12 @@ export type {
 } from "./core/engine.js";
 export { runRun } from "./commands/run.js";
 export type { RunCommandOptions } from "./commands/run.js";
-export { computeConsensus } from "./core/consensus.js";
-export { zoneFor } from "./core/zones.js";
+// From the library, not local copies: judge.ts calls the library's versions,
+// so re-exporting a second implementation here would let a consumer's
+// computeConsensus() diverge from what the judge actually ran — the drift this
+// extraction exists to end.
+export { computeConsensus, zoneFor } from "@hawkeyexl/inference";
+export type { ZoneThresholds } from "@hawkeyexl/inference";
 export { makeJudge } from "./judge/judge.js";
 export {
   makeProvider,
