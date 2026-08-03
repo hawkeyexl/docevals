@@ -82,6 +82,6 @@ export function makeProvider(
     // error type through turns "no API key configured" from a warning into an
     // unhandled stack trace.
     if (e instanceof DocevalsError) throw e;
-    throw new DocevalsError((e as Error).message);
+    throw new DocevalsError(e instanceof Error ? e.message : String(e));
   }
 }
