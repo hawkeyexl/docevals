@@ -3,6 +3,7 @@
  * A grader receives every (page, eval) target that resolved to its kind and
  * returns normalized findings. LLM grading lives in src/judge, not here.
  */
+import type { ExecFn } from "@hawkeyexl/inference";
 import type { Finding } from "../types.js";
 import type { DocevalsConfig } from "../core/config.js";
 import type { ResolvedEval, ResolvedPagePlan } from "../core/resolve.js";
@@ -13,24 +14,10 @@ export interface GraderTarget {
   eval: ResolvedEval;
 }
 
-export interface ExecResult {
-  code: number | null;
-  stdout: string;
-  stderr: string;
-  timedOut: boolean;
-  /** Set when the process could not be spawned (e.g. binary not found). */
-  spawnError?: string;
-}
-
-export interface ExecOptions {
-  cwd?: string;
-  timeoutMs?: number;
-  env?: Record<string, string>;
-  /** Text piped to the child's stdin (stdin is closed after writing). */
-  input?: string;
-}
-
-export type ExecFn = (cmd: string[], opts?: ExecOptions) => Promise<ExecResult>;
+// The exec seam is shared with the inference layer's subprocess provider, so
+// these types live there now. Re-exported so grader code keeps importing them
+// from one place.
+export type { ExecFn, ExecOptions, ExecResult } from "@hawkeyexl/inference";
 
 export interface GraderContext {
   targets: GraderTarget[];

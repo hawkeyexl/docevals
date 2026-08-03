@@ -7,7 +7,7 @@ import { runEvals, type EngineReport, type JudgeFn, type RunOptions } from "../c
 import { loadConfig, type DocevalsConfig } from "../core/config.js";
 import { render, type ReportFormat } from "../reporters/index.js";
 import { makeJudge } from "../judge/judge.js";
-import { makeProvider } from "../judge/providers/index.js";
+import { makeProvider } from "../judge/provider.js";
 import { makeGenerateScripts } from "../graders/scriptgen.js";
 import type { GenerateFn } from "../core/engine.js";
 import { DocevalsError } from "../types.js";

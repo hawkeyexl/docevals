@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { resolve } from "node:path";
-import { extractJson } from "../../src/judge/providers/openai-compat.js";
+import { extractJson } from "@hawkeyexl/inference";
 import {
   collectFailures,
   lastJsonBlob,

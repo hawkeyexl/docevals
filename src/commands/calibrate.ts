@@ -22,7 +22,7 @@ import { loadConfig } from "../core/config.js";
 import { readPage } from "../core/discover.js";
 import { resolvePage } from "../core/resolve.js";
 import { makeJudge } from "../judge/judge.js";
-import { makeProvider } from "../judge/providers/index.js";
+import { makeProvider } from "../judge/provider.js";
 import type { JudgeFn } from "../core/engine.js";
 
 export const AGREEMENT_THRESHOLD = 0.7;

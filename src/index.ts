@@ -17,12 +17,29 @@ export type {
 } from "./core/engine.js";
 export { runRun } from "./commands/run.js";
 export type { RunCommandOptions } from "./commands/run.js";
-export { computeConsensus } from "./core/consensus.js";
-export { zoneFor } from "./core/zones.js";
+// From the library, not local copies: judge.ts calls the library's versions,
+// so re-exporting a second implementation here would let a consumer's
+// computeConsensus() diverge from what the judge actually ran — the drift this
+// extraction exists to end.
+export { computeConsensus, zoneFor } from "@hawkeyexl/inference";
+export type { ZoneThresholds } from "@hawkeyexl/inference";
 export { makeJudge } from "./judge/judge.js";
-export { makeProvider } from "./judge/providers/index.js";
-export { MockProvider, mockVerdict } from "./judge/providers/mock.js";
-export type { JudgeProvider } from "./judge/types.js";
+export {
+  makeProvider,
+  providerSpecFor,
+  resolveProviderIdentity,
+} from "./judge/provider.js";
+// The provider contract and the offline test seam come from the shared
+// inference layer; re-exported so downstream code keeps one import site.
+// `InferenceProvider` is what this package used to call `JudgeProvider`.
+export {
+  MockProvider,
+  mockVerdict,
+  type CompleteJSONRequest,
+  type CompleteJSONResponse,
+  type InferenceProvider,
+  type MockResponse,
+} from "@hawkeyexl/inference";
 export { render } from "./reporters/index.js";
 export type { ReportFormat } from "./reporters/index.js";
 export {

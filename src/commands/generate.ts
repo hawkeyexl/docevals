@@ -7,7 +7,7 @@ import { loadConfig } from "../core/config.js";
 import { discoverPages } from "../core/discover.js";
 import { resolvePages } from "../core/resolve.js";
 import { makeGenerateScripts } from "../graders/scriptgen.js";
-import { makeProvider } from "../judge/providers/index.js";
+import { makeProvider } from "../judge/provider.js";
 import { sha256 } from "../judge/cache.js";
 import type { GraderTarget } from "../graders/types.js";
 

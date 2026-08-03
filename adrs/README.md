@@ -15,6 +15,7 @@ Every **behavior change** in docevals ships with an ADR here. The ADR records th
 |---|---|---|
 | [01000](01000-publish-the-frontmatter-schema-from-this-repo.md) | Publish the frontmatter schema from this repo | accepted |
 | [01001](01001-fill-proposes-llm-evals-with-confidence-gating.md) | `fill` proposes llm-graded evals with a confidence gate | accepted |
+| [01002](01002-take-inference-from-the-shared-library.md) | Take the inference layer from `@hawkeyexl/inference` | accepted |
 
 ## To backfill
 

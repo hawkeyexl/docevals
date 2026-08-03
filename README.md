@@ -13,7 +13,7 @@ Verdicts are **binary pass/fail**. Suite pass rates emerge from binary judgments
 ## Install
 
 ```bash
-npm i -D docevals
+npm i -D @hawkeyexl/docevals
 npx docevals init
 ```
 
@@ -64,7 +64,7 @@ evals:
 The schema ships with the package, so any JSON Schema validator can check your pages. With [docmeta](https://github.com/hawkeyexl/docmeta):
 
 ```bash
-docmeta validate --schema node_modules/docevals/schemas/frontmatter-0.1.json docs/
+docmeta validate --schema node_modules/@hawkeyexl/docevals/schemas/frontmatter-0.1.json docs/
 ```
 
 Or wire it into docevals as a deterministic eval, so bad eval declarations fail the run like any other check:
@@ -75,7 +75,7 @@ evals:
     assertion: Page frontmatter matches the docevals schema.
     grader: tool:docmeta
     options:
-      schemas: ["node_modules/docevals/schemas/frontmatter-0.1.json"]
+      schemas: ["node_modules/@hawkeyexl/docevals/schemas/frontmatter-0.1.json"]
     severity: error
 ```
 

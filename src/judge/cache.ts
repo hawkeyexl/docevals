@@ -1,19 +1,14 @@
 /**
- * Judge response cache: content-addressed JSON files storing the full
- * ensemble, so cached evals replay identically. The key covers provider,
- * model, prompt version, run count, page body, and the resolved eval — any
- * change misses.
+ * Judge cache key composition. The cache itself is the inference library's
+ * `JsonCache`; what stays here is what only docevals can decide — what
+ * invalidates an entry: provider, model, prompt version, run count,
+ * temperature, the page body, and the resolved eval.
  */
-import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
-import type { JudgeRun } from "../types.js";
+import { buildCacheKey, sha256 } from "@hawkeyexl/inference";
 import type { ResolvedEval } from "../core/resolve.js";
 import { PROMPT_VERSION } from "./prompt.js";
 
-export function sha256(text: string): string {
-  return createHash("sha256").update(text, "utf8").digest("hex");
-}
+export { sha256 };
 
 export function cacheKey(
   provider: string,
@@ -29,54 +24,14 @@ export function cacheKey(
     examples: ev.examples,
     type: ev.type,
   });
-  return sha256(
-    [
-      provider,
-      model,
-      `v${PROMPT_VERSION}`,
-      `r${runs}`,
-      `t${temperature}`,
-      sha256(body),
-      sha256(evalFingerprint),
-    ].join("|"),
-  );
-}
-
-export class JudgeCache {
-  /** Cache-write failures warn once per run, not once per eval. */
-  private warned = false;
-
-  constructor(
-    private readonly dir: string,
-    private readonly enabled: boolean = true,
-  ) {}
-
-  get(key: string): JudgeRun[] | undefined {
-    if (!this.enabled) return undefined;
-    const path = join(this.dir, `${key}.json`);
-    if (!existsSync(path)) return undefined;
-    try {
-      const runs = JSON.parse(readFileSync(path, "utf8")) as JudgeRun[];
-      return runs.map((r) => ({ ...r, cached: true }));
-    } catch {
-      return undefined; // Corrupt cache entry — treat as a miss.
-    }
-  }
-
-  set(key: string, runs: JudgeRun[]): void {
-    if (!this.enabled) return;
-    // The cache is an optimization: a write failure (read-only workspace, full
-    // disk, long path) must never abort a run whose judging already succeeded.
-    try {
-      mkdirSync(this.dir, { recursive: true });
-      writeFileSync(join(this.dir, `${key}.json`), JSON.stringify(runs, null, 2));
-    } catch (e) {
-      if (!this.warned) {
-        this.warned = true;
-        console.warn(
-          `docevals: could not write the judge cache at ${this.dir} (${e instanceof Error ? e.message : String(e)}). Continuing without caching.`,
-        );
-      }
-    }
-  }
+  return buildCacheKey([
+    provider,
+    model,
+    `v${PROMPT_VERSION}`,
+    `r${runs}`,
+    `t${temperature}`,
+    // Pre-hashed: page bodies are large and key parts should stay short.
+    sha256(body),
+    sha256(evalFingerprint),
+  ]);
 }
