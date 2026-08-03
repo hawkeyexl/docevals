@@ -118,6 +118,24 @@ describe("makeProvider", () => {
     expect(() => makeProvider(config)).toThrow(/ANTHROPIC_API_KEY/);
   });
 
+  it("raises a DocevalsError, not the library's own error type", () => {
+    // `run` degrades to deterministic-only evals when provider construction
+    // fails, but only for a DocevalsError — it rethrows anything else, and
+    // cli.ts fail() maps only DocevalsError to exit 2. A foreign error type
+    // turns "no API key configured" from a warning into an unhandled stack
+    // trace on the standard `docevals run --deterministic-only` CI path.
+    delete process.env["ANTHROPIC_API_KEY"];
+    const config = parseConfig("version: 1\n", PATH);
+    expect(() => makeProvider(config)).toThrow(DocevalsError);
+  });
+
+  it("raises a DocevalsError for an unknown provider too", () => {
+    const config = parseConfig("version: 1\n", PATH);
+    expect(() =>
+      makeProvider(config, { provider: "gemini" as never }),
+    ).toThrow(DocevalsError);
+  });
+
   it("honours a custom apiKeyEnv", () => {
     delete process.env["ANTHROPIC_API_KEY"];
     process.env["MY_KEY"] = "test-key";

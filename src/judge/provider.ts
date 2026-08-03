@@ -72,5 +72,16 @@ export function makeProvider(
   config: DocevalsConfig,
   options: JudgeOptions = {},
 ): InferenceProvider {
-  return makeInferenceProvider(providerSpecFor(config, options));
+  try {
+    return makeInferenceProvider(providerSpecFor(config, options));
+  } catch (e) {
+    // The library raises its own InferenceError (missing API key, unknown
+    // provider). It must surface as a DocevalsError: `run` degrades to
+    // deterministic-only evals on a DocevalsError and rethrows anything else,
+    // and cli.ts fail() maps only DocevalsError to exit 2. Letting a foreign
+    // error type through turns "no API key configured" from a warning into an
+    // unhandled stack trace.
+    if (e instanceof DocevalsError) throw e;
+    throw new DocevalsError((e as Error).message);
+  }
 }
