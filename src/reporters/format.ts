@@ -23,6 +23,11 @@ export type SummaryFormat = (typeof SUMMARY_FORMATS)[number];
  *
  * Matching is exact: no trimming, no case folding. A near-miss is a typo the
  * caller should see, not something to guess at.
+ *
+ * `flag` names whatever the caller actually supplied, so the message points at
+ * something the reader can act on: the CLI passes `--format`, the render entry
+ * points pass `format` because a library caller passed a parameter, not a flag.
+ * The shape is identical either way — only the noun changes.
  */
 export function parseFormat<T extends string>(
   value: string,

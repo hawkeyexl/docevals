@@ -92,6 +92,14 @@ describe("render dispatch", () => {
     // Reachable from library consumers, who are not behind the CLI parser.
     expect(() => render(EMPTY_REPORT, "xml" as never)).toThrow(DocevalsError);
   });
+
+  it("reports the same message shape as every other guard", () => {
+    // One generator, three call sites. A hand-written message here would drift
+    // from parseFormat's the first time either is reworded.
+    expect(() => render(EMPTY_REPORT, "xml" as never)).toThrow(
+      'format must be one of human | json | markdown | github, got "xml"',
+    );
+  });
 });
 
 /**
@@ -128,6 +136,15 @@ describe("summary renderers reject an unknown format", () => {
 
   it("renderFill throws rather than silently emitting human output", () => {
     expect(() => renderFill(EMPTY_FILL, "xml" as never)).toThrow(DocevalsError);
+  });
+
+  it("uses the same message shape as render and the CLI parser", () => {
+    expect(() => renderList(EMPTY_LIST, "xml" as never)).toThrow(
+      'format must be one of human | json, got "xml"',
+    );
+    expect(() => renderFill(EMPTY_FILL, "xml" as never)).toThrow(
+      'format must be one of human | json, got "xml"',
+    );
   });
 
   it("rejects a run-only format, which would otherwise render as human", () => {

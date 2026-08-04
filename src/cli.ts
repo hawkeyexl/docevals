@@ -223,6 +223,9 @@ program
         provider: opts.provider as string | undefined,
         model: opts.model as string | undefined,
       });
+      // As in `run`: parseFormatArg validated this at parse time, and the cast
+      // only re-narrows from the `unknown` the Record-typed options bag erases
+      // it to. renderFill guards itself regardless.
       console.log(renderFill(report, opts.format as SummaryFormat));
       process.exitCode = report.exitCode;
     } catch (e) {
