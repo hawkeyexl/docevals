@@ -78,6 +78,29 @@ Unit tests are necessary but not sufficient. When you add or change a **user-fac
 
 CI runs the built CLI against this corpus and asserts specific outcomes, so a fixture change that flips one of these must update `.github/workflows/ci.yml` in the same commit.
 
+The docs site (`docs/src/content/docs/**`) is a **second** corpus, gated by the `verify-docs` job and required to be all-green. It does not replace this one — these fixtures deliberately encode failures so the gate is meaningful.
+
+## Content & documentation work (required)
+
+Before drafting or editing any page under `docs/src/content/docs/**`, consult `docs/content-strategy/`. **Read on demand — do not inline it here.**
+
+- `docs/content-strategy/README.md` — index, the ID-linking model, and the evidence caveat (start here)
+- `docs/content-strategy/audiences/` — six target segments (`aud-*`)
+- `docs/content-strategy/personas/` — one minimal persona per audience (`persona-*`)
+- `docs/content-strategy/journeys/` — twelve critical user journeys (`cuj-*`), steps → real doc paths
+- `docs/content-strategy/information-architecture/` — the CUJ-first IA and its gap analysis
+
+The rules that follow from it:
+
+1. **Identify the persona** the page serves — Priya (corpus owner), Nate (solo owner), Devin (pipeline owner), Sara (standard owner), Theo (contributor), or Iris (retrofitter).
+2. **Find the matching CUJ** and structure the page around reaching that outcome — not by document type. Do not impose a Diátaxis split as the organizing principle.
+3. **Link into `reference/`** for exhaustive detail. Journey pages explain the path; they do not duplicate flag tables or config keys.
+4. **Record the page in `proposed-ia.md`.** A page that is not in the content set does not get written.
+5. **Every page needs `title` and `description` frontmatter.** Pages that present commands also carry inline Doc Detective steps against committed fixtures — see "Authoring convention" in `proposed-ia.md`.
+6. **Verify claims against the source, and exact emitted strings against `test/`.** Type definitions describe the shape of output and over-promise.
+
+The strategy is an evidence-based *hypothesis*, not validated research — docevals has no users yet. Re-derive it from real call evidence when there are, and expect it to change.
+
 ## Commit messages (required)
 
 All commits follow [Conventional Commits](https://www.conventionalcommits.org/).
@@ -153,6 +176,15 @@ Note that vitest and node write diagnostics, including failures, to stderr — `
 - `DOCEVALS_LIVE=1 npm test` — adds the live smoke test via the Claude CLI
 - `npm run typecheck` / `npm run build`
 - `node dist/cli.js run --deterministic-only` — dogfood run against `test/fixtures/pages`
+- `npm run docs:verify` — run docevals over the docs site (the `verify-docs` gate). **Requires the CLI on `PATH` first**, because the pages' inline Doc Detective steps invoke `npx docevals`:
+
+  ```bash
+  npm run build && npm link && npm link @hawkeyexl/docevals && npm run docs:verify
+  ```
+
+  `dist/` is gitignored and the package is unpublished, so without the link those steps have nothing to resolve. CI does the same thing.
+- `npm run docs:refresh-cache` — clear and regenerate `docs/.docevals-cache/` after a `PROMPT_VERSION` bump (needs a provider configured)
+- `cd docs && npm run build` — build the Starlight site
 
 ## Architecture
 
@@ -169,10 +201,10 @@ Note that vitest and node write diagnostics, including failures, to stderr — `
 - Errored judge runs count against consensus — they may push an eval to human-review, never to a silent pass.
 - Deterministic evals fail only on `error`-severity findings; warnings and info report but pass.
 - Exit codes: `0` pass, `1` any fail/error/suite-miss, `2` operational (`DocevalsError`).
-- Bump `PROMPT_VERSION` (`src/judge/prompt.ts`) whenever judge prompts change — it is part of the cache key, and stale cached verdicts otherwise survive a prompt revision.
-- Bump `FILL_PROMPT_VERSION` (`src/fill/prompt.ts`) whenever the fill prompt or `PROPOSAL_SCHEMA` changes — it is part of the fill cache key, and stale cached proposals otherwise survive a prompt revision (the exact analog of `PROMPT_VERSION`).
+- Bump `PROMPT_VERSION` (`src/judge/prompt.ts`) whenever judge prompts change — it is part of the cache key, and stale cached verdicts otherwise survive a prompt revision. **Bumping it also invalidates the committed docs cache** (`docs/.docevals-cache/`), which turns the `verify-docs` job red until you run `npm run docs:refresh-cache` and re-read the affected pages. That breakage is deliberate: a prompt change can change a verdict, and the docs present those verdicts as documented behavior (ADR 01004).
+- Bump `FILL_PROMPT_VERSION` (`src/fill/prompt.ts`) whenever the fill prompt or `PROPOSAL_SCHEMA` changes — it is part of the fill cache key, and stale cached proposals otherwise survive a prompt revision (the exact analog of `PROMPT_VERSION`, including the committed-docs-cache consequence above).
 - Script generation must leave the page byte-identical outside the edited frontmatter node.
-- Frontmatter-declared commands are arbitrary code execution driven by content files. Any change near command graders or script generation must preserve the `scripts.allowFrontmatterCommands` config and `--no-frontmatter-commands` flag gate.
+- Content files drive arbitrary code execution by **two** paths, and they are gated differently. (1) Frontmatter-declared commands — any change near command graders or script generation must preserve the `scripts.allowFrontmatterCommands` config and `--no-frontmatter-commands` flag gate. (2) The `tool:doc-detective` grader executes steps embedded in page *bodies*, which that flag does **not** cover; the only complete control is restricting the job to same-repo pull requests. The `verify-docs` job in [ci.yml](.github/workflows/ci.yml) carries that gate — never remove it, and never document the flag as sufficient protection against a hostile fork.
 - `schemas/frontmatter-0.1.json` is a **published artifact**, not internal source: it ships in the package (`files`/`exports`) and consumers point their validator at it by path. Keep the `$id` a resolvable URL, and pin its behavior in `test/unit/schema.test.ts`.
 - docmeta is a published dependency (`^1.3.0`) used for `extractFrontmatter` (shared fence handling and JSON-Pointer line maps) and `runValidate` (the `tool:docmeta` grader). 1.3.0 is the floor — the release that added those exports.
 
@@ -245,7 +277,7 @@ Two workflows are inert until configured, by design — both would otherwise fai
 
   Before enabling, configure npm trusted publishing for the package (add a trusted publisher on npmjs.com naming this repo and `release.yml`) so the publish authenticates via OIDC without an `NPM_TOKEN`. The release commit is pushed with the default `GITHUB_TOKEN`, which works while `main` has no ruleset requiring PRs; if one is added, this needs a GitHub App token as a bypass actor, as docmeta does.
 
-The remaining unported convention is **docs impact** — doc-detective gates behavior changes on a docs assessment against its content strategy. docevals has no docs site, so the README is the only user-facing surface and there is nothing to gate.
+The last unported convention was **docs impact** — doc-detective gates behavior changes on a docs assessment against its content strategy. That is now ported: docevals has a documentation site (`docs/`) and a content strategy (`docs/content-strategy/`), so a behavior change is assessed against them. See ["Content & documentation work"](#content--documentation-work-required) above. Not machine-enforced; the `verify-docs` job checks that the pages that exist are *correct*, not that new behavior has pages.
 
 ## Related files
 
@@ -255,9 +287,13 @@ The remaining unported convention is **docs impact** — doc-detective gates beh
 - [adrs/](adrs) — decision records, template, and backfill list
 - [.github/workflows/release.yml](.github/workflows/release.yml) — release pipeline (opt-in)
 - [.github/workflows/commitlint.yml](.github/workflows/commitlint.yml) — PR commit-message enforcement
-- [.github/workflows/ci.yml](.github/workflows/ci.yml) — build/test matrix and the dogfood gate
+- [.github/workflows/ci.yml](.github/workflows/ci.yml) — build/test matrix, the fixture dogfood gate, and `verify-docs`
 - [.github/workflows/claude-pr-review.yml](.github/workflows/claude-pr-review.yml) — automatic review on every PR
 - [.github/workflows/claude.yml](.github/workflows/claude.yml) — interactive `@claude` in issues, PR comments, and reviews (trusted authors only)
-- [docevals.config.yaml](docevals.config.yaml) — the repo's own dogfood config
+- [docevals.config.yaml](docevals.config.yaml) — the repo's own dogfood config (fixture corpus)
+- [docs/docevals.config.yaml](docs/docevals.config.yaml) — the docs-site config used by `verify-docs`
+- [docs/content-strategy/](docs/content-strategy) — audiences, personas, CUJs, and the proposed IA
+- [docs/src/content/docs/](docs/src/content/docs) — the published Starlight site
+- [.doc-detective.json](.doc-detective.json) — Doc Detective config for the docs' inline test steps
 - [schemas/frontmatter-0.1.json](schemas/frontmatter-0.1.json) — the published frontmatter schema
 - [src/core/config-schema.json](src/core/config-schema.json) — config file contract

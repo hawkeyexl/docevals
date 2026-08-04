@@ -1,0 +1,83 @@
+---
+title: docevals
+description: Deterministic and LLM-as-judge evals for documentation pages, driven by frontmatter.
+---
+
+Every quality check on a documentation page is an **eval**: a named, testable assertion with a
+**grader** that decides pass or fail. Graders run in preference order — code first, an LLM judge
+second, a human last.
+
+## The 60-second version
+
+Declare an assertion in a page's frontmatter:
+
+```yaml
+---
+title: Installation
+last-reviewed: 2026-06-01
+evals:
+  - no-future-promises
+  - name: install-command-present
+    assertion: The page contains a bash code block with `npm i -g doc-detective`.
+    grader: command
+---
+```
+
+Run it:
+
+```console
+$ npx docevals run docs/ --deterministic-only
+docs/actions/goTo.mdx
+  FAIL fresh-enough
+       error:4 [freshness/stale] Page last reviewed 937 days ago (max 365)
+  pass readable
+  pass frontmatter-valid
+
+Suites
+  reference: 2/3 passed — 67% vs target 100% below target (1 skipped)
+```
+
+Exit `1`. That's a docs regression, caught the way a test would catch a code one — and this run
+needed no API key.
+
+## What are you trying to do?
+
+| Goal | Start here |
+|---|---|
+| Stand up a first eval gate on my repo | [Get started](/docevals/get-started/) |
+| Understand the model before I commit to it | [How docevals works](/docevals/get-started/how-docevals-works/) |
+| Write evals my team can maintain | [Write evals](/docevals/evals/) |
+| Cover a corpus I can't annotate by hand | [Adopt at scale](/docevals/adopt/) |
+| Run the gate in CI safely and cheaply | [Run it in CI](/docevals/ci/) |
+| Convince myself the judge is trustworthy | [Trust the judge](/docevals/judge/) |
+| Unblock a pull request that just went red | [Fix a failing eval](/docevals/fix/) |
+| Look up a flag, key, or grader | [Reference](/docevals/reference/) |
+
+## What makes it different
+
+**It orchestrates; it doesn't reimplement.** markdownlint, Vale, docmeta, doc-structure-lint, and
+Doc Detective keep doing their jobs — their findings arrive as named evals with severities, in one
+report with one exit code. Three native checks fill gaps nothing else covers: freshness, reading
+level, and cross-page differentiation.
+
+**The LLM is the last resort, not the pitch.** If a criterion can be expressed as code, it should be.
+`docevals promote` finds llm evals that could be deterministic, and `docevals generate` writes the
+scripts — as reviewable files beside your docs, never inline in frontmatter.
+
+**The judge has safeguards, and you can audit them.** Temperature 0, pinned models, a 3-run ensemble,
+and confidence zones that route the uncertain cases to a person instead of guessing. `docevals
+calibrate` scores the judge against your own human-verified set, so "is this trustworthy?" has a
+number rather than an opinion.
+
+**Adoption is incremental.** `docevals fill` proposes evals for a whole corpus with a confidence
+gate; severity levels and capability suites let you land an honest standard on a legacy corpus
+without a day-one wall of red.
+
+## Requirements
+
+Node.js 24+. No hosted service, no account — it runs in your existing pipeline.
+
+```bash
+npm i -D @hawkeyexl/docevals
+npx docevals init
+```

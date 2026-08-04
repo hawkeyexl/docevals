@@ -1,0 +1,154 @@
+---
+title: Graders reference
+description: Every grader kind, its options, and what it reports.
+---
+
+A grader decides pass or fail for one eval on one page. Verified against `src/graders/registry.ts`
+and each adapter.
+
+Graders sit in a preference order — code first, judge second, human last. Cheapest and most
+explicable wins; see [How docevals works](/docevals/get-started/how-docevals-works/).
+
+| Kind | Runs | Needs a provider |
+|---|---|---|
+| `command` | Any CLI check you supply | No |
+| `tool:markdownlint` · `tool:vale` · `tool:docmeta` · `tool:doc-structure-lint` · `tool:doc-detective` | An existing tool | No |
+| `tool:freshness` · `tool:reading-level` · `tool:differentiation` | Native checks nothing else covers | No |
+| `llm` | The judge | Yes |
+| `human` | A person | No |
+
+Deterministic evals fail only on **`error`**-severity findings. Warnings and info report and pass.
+
+## `command`
+
+Runs any executable. `{file}` in an argument expands to the page's absolute path.
+
+| Option | Default | Notes |
+|---|---|---|
+| `command` (eval field) | — | The argv array. |
+| `successExitCodes` (eval field) | `[0]` | |
+| `timeoutMs` (eval field) | `scripts.timeoutMs` (`30000`) | |
+
+A `command` eval with an assertion and **no** command is a plain-language deterministic check —
+docevals generates the script. See [Deterministic checks](/docevals/evals/deterministic-checks/).
+
+## `tool:markdownlint`
+
+Runs `markdownlint-cli2` once per eval-configuration group and parses its text output.
+
+| Option | Default |
+|---|---|
+| `command` | `["npx", "--no-install", "markdownlint-cli2"]` |
+
+Findings carry the rule id (`MD013/line-length`), line, and column when present. Default timeout
+120000 ms.
+
+## `tool:vale`
+
+Runs Vale with `--output=JSON` once per group.
+
+| Option | Default |
+|---|---|
+| `command` | `["vale", "--output=JSON"]` |
+
+Vale's own severities map through the eval's `severityMap`, defaulting to:
+
+| Vale | docevals |
+|---|---|
+| `error` | `error` |
+| `warning` | `warning` |
+| `suggestion` | `info` |
+
+## `tool:docmeta`
+
+Validates frontmatter against JSON Schema. Runs **in-process** via docmeta's programmatic API — no
+subprocess — so behavior is identical to `docmeta validate`.
+
+| Option | Default | Notes |
+|---|---|---|
+| `schemas` | docmeta's default | Array of schema refs: built-in ids, file paths, or URLs. |
+
+## `tool:doc-structure-lint`
+
+Validates page structure against a named YAML template.
+
+| Option | Default | Notes |
+|---|---|---|
+| `template` | — | **Required.** Missing it is a finding, not a crash. |
+| `templatePath` | — | Path to `templates.yaml`. |
+| `command` | `["npx", "--no-install", "doc-structure-lint"]` | |
+
+## `tool:doc-detective`
+
+Runs the procedure tests embedded in a page and reports failed steps. This is how the docs you are
+reading test their own commands — see [Test your commands](/docevals/evals/test-your-commands/).
+
+| Option | Default |
+|---|---|
+| `command` | `["npx", "--no-install", "doc-detective"]` |
+
+:::caution[`command` is a *partial* override]
+`--input <page>` and `--exit-on-fail` are appended to whatever you supply. `--exit-on-fail` is not
+optional: Doc Detective exits 0 even when steps fail, and 4.x keeps its results JSON out of stdout,
+so without the flag a failing doc test is undetectable and passes silently. Your array is the
+*prefix* of the argv, not the whole of it.
+:::
+
+A timeout is reported distinctly from a failure. Default timeout 600000 ms, since this grader may
+drive a browser.
+
+:::danger
+This grader executes shell commands embedded in page **bodies**.
+`scripts.allowFrontmatterCommands` does **not** gate it. On untrusted pull requests the job itself
+must be gated — see [Untrusted pull requests](/docevals/ci/untrusted-pull-requests/).
+:::
+
+## `tool:freshness`
+
+The page's review date must be within `maxAgeDays`. No external tool covers this frontmatter-driven
+staleness contract.
+
+| Option | Default |
+|---|---|
+| `field` | `last-reviewed` |
+| `maxAgeDays` | `365` |
+
+| Rule id | Meaning |
+|---|---|
+| `freshness/stale` | Older than `maxAgeDays`. Carries the page's date line. |
+| `freshness/missing` | The field is absent. |
+| `freshness/invalid` | The value did not parse as a date. |
+
+## `tool:reading-level`
+
+Flesch–Kincaid grade level of the page prose must not exceed `maxGrade`. Code blocks, MDX
+comments, tags, and link URLs are stripped before scoring.
+
+| Option | Default |
+|---|---|
+| `maxGrade` | `10` |
+
+Rule id `reading-level/grade`. **English-only** — a documented limitation, not a bug. Prose shorter
+than the minimum sample is not scored.
+
+## `tool:differentiation`
+
+Related pages — per-endpoint or per-action reference docs — must be sufficiently distinct from each
+other. Similarity is cosine similarity over word frequencies of the cleaned prose; a page above the
+threshold against any sibling in scope fails.
+
+| Option | Default |
+|---|---|
+| `scope` | — Glob selecting the sibling set to compare against. |
+| `maxSimilarity` | `0.85` |
+
+## `llm`
+
+The judge. Needs `assertion`, and works far better with `evidence` and `examples` — see
+[Write good assertions](/docevals/evals/write-good-assertions/). Outcome is `pass`, `fail`, or
+`needs-review`; the mechanics are in [How judging works](/docevals/judge/).
+
+## `human`
+
+Routes to a person. Verdicts persist in `.docevals/reviews.yaml` and self-invalidate when the page
+changes. See [Human review](/docevals/judge/human-review/).

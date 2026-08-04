@@ -1,0 +1,107 @@
+---
+title: Write good assertions
+description: Why most assertions are unjudgeable, and the three fields that fix them.
+---
+
+If an eval keeps flipping between pass and fail, or fails pages your team considers fine, the grader
+is almost certainly not the problem. **A flaky eval is a vague assertion.**
+
+This is the highest-leverage page on this site. Everything else works only if the assertions do.
+
+## The test
+
+> Would two careful reviewers, reading the same page, reach the same verdict?
+
+If not, no grader will be consistent either — and tuning the model is the wrong repair.
+
+| Unjudgeable | Judgeable |
+|---|---|
+| The page is well-written. | The page states its prerequisites before the first command. |
+| The examples are good. | Every code block specifies a language. |
+| The page is up to date. | The page documents no flag that `--help` does not list. |
+| The tone is appropriate. | The page addresses the reader as "you", not "the user". |
+
+The left column is not a quality bar; it is a *feeling* about one. The right column can be decided
+by anyone, repeatedly, including a model.
+
+## The three fields
+
+They are one mechanism, not three optional properties.
+
+```yaml
+- name: prerequisites-first
+  assertion: >
+    The page states any required tools or accounts before the first command
+    the reader is asked to run.
+  grader: llm
+  evidence: Everything above the first fenced code block
+  examples:
+    pass: Lists "Node.js 24+" in a prerequisites section before the install command.
+    fail: Opens with `npm i` and mentions the Node version afterwards, or not at all.
+```
+
+**`assertion`** states a claim that is true or false. Write it as something you could check, not
+something you want.
+
+**`evidence`** scopes what the judge looks at. Without it, the judge reasons over the whole page and
+finds a reason to fail on a section your assertion was never about. Narrow evidence is the cheapest
+accuracy improvement available.
+
+**`examples.pass` / `examples.fail`** pin the boundary. This is where a borderline case gets decided
+**once, in writing**, instead of differently on every run. They matter far more than they look:
+an inline llm eval without them raises a warning for exactly this reason.
+
+## Write the failing example first
+
+The `fail` example is the one that does the work. It forces you to say what violating the assertion
+actually looks like — and if you cannot write one, the assertion is not judgeable yet.
+
+It also pays off later: when a contributor hits this eval in CI, the judge's rationale tells them
+*what* is wrong and your `examples.fail` shows them *what it looks like*. Between them, the offending
+sentence is usually obvious. See [Fix a failing eval](/docevals/fix/).
+
+## Ask whether it should be an llm eval at all
+
+The cheapest moment to notice that an assertion is really a grep is while writing it.
+
+> The page contains a bash code block with `npm i -g doc-detective`.
+
+That is `grader: command` — deterministic, free, and unarguable. Reach for the judge when the
+criterion genuinely needs interpretation, not because it is easier to write. See
+[Deterministic checks](/docevals/evals/deterministic-checks/), and
+[promote](/docevals/adopt/promote-to-deterministic/) for evals already on the wrong tier.
+
+## Common failure modes
+
+**Two claims in one assertion.** "The page explains why and gives a working example" fails ambiguously
+— you cannot tell which half broke. Split it.
+
+**Assertions about the reader.** "The page is easy to follow for a beginner" asks the judge to
+simulate a person. Assert about the *page*: what it contains, states, or orders.
+
+**Negations without scope.** "The page does not mention deprecated APIs" invites the judge to hunt
+the whole page for anything deprecated-adjacent. Scope it with `evidence`.
+
+**Assertions that encode the current corpus.** "Every page has a Prerequisites heading" written
+because that is what today's pages happen to do is a snapshot, not a standard. It will be weakened
+the first time it is inconvenient.
+
+**Aspirational severity.** An assertion you believe in but that fails half your corpus should enter
+at `severity: warning` and ratchet up — *keep the assertion honest and lower the severity*, never the
+reverse. See [Retrofit a legacy corpus](/docevals/adopt/retrofit-a-legacy-corpus/).
+
+## Regression or capability?
+
+It changes how strictly to phrase the assertion.
+
+- **Regression** — guards behavior that must keep working. Target 1.0. Phrase strictly.
+- **Capability** — measures reach across a corpus. Target ~0.7. Phrase for the good case; some
+  pages will not meet it yet, and that is the measurement.
+
+`type` defaults to `regression`. See [Regression vs capability](/docevals/evals/regression-vs-capability/).
+
+## When an eval keeps landing in review
+
+That is a diagnosis, not a chore. An eval that reaches the human-review zone on every run is telling
+you its assertion is ambiguous. Fix the wording rather than answering it faster forever — and if you
+are unsure whether a rewrite helped, [calibrate](/docevals/judge/calibrate/) will tell you.

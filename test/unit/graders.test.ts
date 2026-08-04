@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, it, expect } from "vitest";
 import { parseConfig } from "../../src/core/config.js";
 import { extractFrontmatter } from "docmeta";
@@ -12,6 +13,7 @@ import {
   readingLevelGrader,
 } from "../../src/graders/native/reading-level.js";
 import { parseMarkdownlintOutput } from "../../src/graders/tools/markdownlint.js";
+import { docDetectiveGrader, lastJsonBlob } from "../../src/graders/tools/doc-detective.js";
 import type { ExecFn, ExecResult, GraderTarget } from "../../src/graders/types.js";
 
 const CONFIG = parseConfig("version: 1\n", "/fake/docevals.config.yaml");
@@ -259,6 +261,235 @@ describe("reading level", () => {
       exec: fakeExec({}).exec,
     });
     expect(findings[0]?.ruleId).toBe("reading-level/grade");
+  });
+});
+
+describe("docDetectiveGrader", () => {
+  const ddConfig = parseConfig(
+    [
+      "version: 1",
+      "evals:",
+      "  commands-work:",
+      "    assertion: Documented commands run.",
+      "    grader: tool:doc-detective",
+      "    severity: error",
+      "suites:",
+      "  s: { evals: [commands-work] }",
+    ].join("\n"),
+    "/fake/docevals.config.yaml",
+  );
+
+  function ddTarget(optionsYaml = ""): GraderTarget {
+    const overrides = optionsYaml ? `\n${optionsYaml}` : "";
+    const content = `---\ntitle: x\nevals:\n  suite: s${overrides}\n---\nBody.`;
+    const page: PageFile = {
+      file: "docs/page.md",
+      absPath: "/fake/docs/page.md",
+      content,
+      body: "Body.",
+      frontmatter: extractFrontmatter(content, "markdown"),
+    };
+    const plan = resolvePage(page, ddConfig);
+    return { plan, eval: plan.evals[0]! };
+  }
+
+  // Doc Detective 4.x runs tests as its *default* command and rejects a `run`
+  // subcommand with "Unknown argument: run" — so a stale default silently makes
+  // every tool:doc-detective eval fail. Pin the argv.
+  it("invokes doc-detective with no subcommand", async () => {
+    const { exec, calls } = fakeExec({ code: 0, stdout: "[]" });
+    await docDetectiveGrader.grade({
+      targets: [ddTarget()],
+      config: ddConfig,
+      root: "/fake",
+      exec,
+    });
+    expect(calls[0]).toEqual([
+      "npx",
+      "--no-install",
+      "doc-detective",
+      "--input",
+      "docs/page.md",
+      "--exit-on-fail",
+    ]);
+  });
+
+  it("honors an options.command override", async () => {
+    const target = ddTarget(
+      [
+        "  evals:",
+        "    - name: commands-work",
+        "      assertion: Documented commands run.",
+        "      grader: tool:doc-detective",
+        "      options:",
+        '        command: ["doc-detective", "--config", ".doc-detective.json"]',
+      ].join("\n"),
+    );
+    const { exec, calls } = fakeExec({ code: 0, stdout: "[]" });
+    await docDetectiveGrader.grade({
+      targets: [target],
+      config: ddConfig,
+      root: "/fake",
+      exec,
+    });
+    // --exit-on-fail survives the override: the grader cannot detect failures
+    // without it, so it is not the user's to drop.
+    expect(calls[0]).toEqual([
+      "doc-detective",
+      "--config",
+      ".doc-detective.json",
+      "--input",
+      "docs/page.md",
+      "--exit-on-fail",
+    ]);
+  });
+
+  it("passes when no tests are present (empty results, exit 0)", async () => {
+    const { exec } = fakeExec({ code: 0, stdout: "(WARNING) No tests detected.\n[]" });
+    const findings = await docDetectiveGrader.grade({
+      targets: [ddTarget()],
+      config: ddConfig,
+      root: "/fake",
+      exec,
+    });
+    expect(findings).toEqual([]);
+  });
+
+  it("reports one finding per failed step, not one per nesting level", async () => {
+    const captured = readFileSync(
+      new URL("../fixtures/tool-output/doc-detective-fail.json", import.meta.url),
+      "utf8",
+    );
+    const { exec } = fakeExec({ code: 1, stdout: `running tests...\n${captured}` });
+    const findings = await docDetectiveGrader.grade({
+      targets: [ddTarget()],
+      config: ddConfig,
+      root: "/fake",
+      exec,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.ruleId).toBe("doc-detective/step");
+    expect(findings[0]?.severity).toBe("error");
+    expect(findings[0]?.message).toBe(
+      "A step that fails on purpose.: Returned exit code 7. Expected one of [0]",
+    );
+  });
+
+  // Regression for the silent-pass bug: this is what Doc Detective 4.x actually
+  // produces on a failing step — no results JSON on stdout (it goes to a file),
+  // a coloured human summary on stdout, and tens of KB of ajv schema warnings on
+  // stderr. Before --exit-on-fail this exited 0 and the eval passed.
+  it("reports a 4.x failure whose results JSON never reaches stdout", async () => {
+    const stdout = [
+      "\u001b[31mFailed: 1\u001b[0m",
+      "",
+      "\u001b[31mFailed Steps:\u001b[0m",
+      "\u001b[31m1. windows/unknown - docs_page.md~b7ece155~sa4bacb43\u001b[0m",
+      "   Error: Returned exit code 9. Expected one of [0]",
+      "",
+      "===============================",
+      "",
+      "See detailed results at /repo/.doc-detective/results/testResults-1.json",
+    ].join("\n");
+    const { exec } = fakeExec({
+      code: 1,
+      stdout,
+      stderr: 'strict mode: missing type "object" for keyword "properties"\n'.repeat(50),
+    });
+    const findings = await docDetectiveGrader.grade({
+      targets: [ddTarget()],
+      config: ddConfig,
+      root: "/fake",
+      exec,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.ruleId).toBe("doc-detective/step");
+    // The message carries the step and its error, not the ajv noise.
+    expect(findings[0]?.message).toContain("Returned exit code 9. Expected one of [0]");
+    expect(findings[0]?.message).not.toContain("strict mode");
+    // Colour codes are stripped; the literal bracketed value survives.
+    expect(findings[0]?.message).not.toContain("\u001b[");
+    expect(findings[0]?.message).toContain("[0]");
+  });
+
+  it("falls back to the exit code when output has no parseable failures", async () => {
+    const { exec } = fakeExec({ code: 2, stdout: "", stderr: "Unknown argument: run" });
+    const findings = await docDetectiveGrader.grade({
+      targets: [ddTarget()],
+      config: ddConfig,
+      root: "/fake",
+      exec,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toMatch(/doc-detective exited 2: Unknown argument: run/);
+  });
+
+  it("reports spawn errors", async () => {
+    const { exec } = fakeExec({ code: null, spawnError: "ENOENT" });
+    const findings = await docDetectiveGrader.grade({
+      targets: [ddTarget()],
+      config: ddConfig,
+      root: "/fake",
+      exec,
+    });
+    expect(findings[0]?.message).toMatch(/Failed to run doc-detective: ENOENT/);
+  });
+
+  // A timeout leaves code null; without its own branch that renders as the
+  // meaningless "doc-detective exited null". Doc Detective can drive a browser,
+  // so this is a realistic outcome, not a theoretical one.
+  it("reports timeouts distinctly from a nonzero exit", async () => {
+    const { exec } = fakeExec({ code: null, timedOut: true, stderr: "partial output" });
+    const findings = await docDetectiveGrader.grade({
+      targets: [ddTarget()],
+      config: ddConfig,
+      root: "/fake",
+      exec,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toMatch(/doc-detective timed out after \d+ms/);
+    expect(findings[0]?.message).not.toContain("exited null");
+  });
+
+  it("truncates a long failure report on a line boundary", async () => {
+    const stdout = [
+      "Failed Steps:",
+      ...Array.from({ length: 40 }, (_, n) => `${n + 1}. step-${n}\n   Error: something went wrong here`),
+      "===============================",
+    ].join("\n");
+    const { exec } = fakeExec({ code: 1, stdout });
+    const findings = await docDetectiveGrader.grade({
+      targets: [ddTarget()],
+      config: ddConfig,
+      root: "/fake",
+      exec,
+    });
+    const message = findings[0]?.message ?? "";
+    expect(message).toContain("… (truncated)");
+    // Every retained line is whole — no entry cut mid-sentence.
+    for (const line of message.split("\n")) {
+      if (line === "… (truncated)") continue;
+      expect(stdout.split("\n")).toContain(line);
+    }
+  });
+});
+
+describe("lastJsonBlob", () => {
+  it("finds the results blob when trailing output contains a brace", () => {
+    // Regression: anchoring on the single last `}` in the string means any
+    // trailing `{...}` — a {runId} path segment, an error line — makes every
+    // candidate over-run the JSON, so parsing fails and the blob is lost.
+    const stdout = [
+      "running tests...",
+      '{"specs":[{"result":"FAIL"}]}',
+      "See per-run results at /out/.doc-detective/runs/{runId}/testResults.json",
+    ].join("\n");
+    expect(lastJsonBlob(stdout)).toEqual({ specs: [{ result: "FAIL" }] });
+  });
+
+  it("returns undefined when there is no JSON at all", () => {
+    expect(lastJsonBlob("no braces here")).toBeUndefined();
+    expect(lastJsonBlob("an opening { but no close")).toBeUndefined();
   });
 });
 

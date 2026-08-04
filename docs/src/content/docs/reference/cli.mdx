@@ -1,0 +1,138 @@
+---
+title: CLI reference
+description: Every docevals command and flag, with the exit code each produces.
+---
+
+Eight commands. Every flag below is verified against `src/cli.ts`; the exit codes are exercised by
+the inline tests at the foot of this page.
+
+## Common conventions
+
+Commands that operate on pages take **positional globs**. With none given, the config's
+`files.include` applies.
+
+| Flag | Commands | Meaning |
+|---|---|---|
+| `-c, --config <path>` | all except `init` | Path to `docevals.config.yaml`. Without it, docevals looks for that filename in the working directory; with no file at all, built-in defaults apply and there are no named evals or suites. |
+| `-f, --format <format>` | `list`, `run`, `fill` | Output format. `run` accepts `human`, `json`, `markdown`, `github`; `list` and `fill` accept `human` and `json`. |
+| `--provider <name>` | `run`, `generate`, `fill`, `promote`, `calibrate` | `anthropic`, `openai`, or `claude-cli`. Overrides `provider.default`. |
+| `--model <model>` | same as above | Overrides the model for the selected provider. |
+
+Flags override config; they do not bypass it. An unset flag falls through to the resolved config
+value, so a config file and the CLI reach the same code paths.
+
+## `docevals run [globs...]`
+
+Runs every resolved eval: deterministic graders first (cheapest first), then the LLM judge, then
+human-review resolution.
+
+| Flag | Effect |
+|---|---|
+| `--deterministic-only` | Run only `command` and `tool:*` graders. LLM evals report as `skipped`. No provider needed — this is the offline path. |
+| `--llm-only` | Run only LLM-judged evals; skip deterministic graders. |
+| `--no-frontmatter-commands` | Skip `command` evals declared in **page frontmatter**. See [Untrusted pull requests](/docevals/ci/untrusted-pull-requests/) — this does **not** gate `tool:doc-detective`. |
+| `--no-generate` | Do not generate scripts for command evals that lack a `command`. |
+| `--no-cache` | Bypass the judge response cache. |
+| `--fail-on-review` | Exit 1 when any eval lands in the human-review zone. |
+| `--runs <n>` | Ensemble runs per eval. Overrides `judge.ensembleRuns` (default 3). |
+| `--max-cost <usd>` | Abort judging once spend passes this ceiling. Overrides `judge.maxCostUsd`. |
+
+## `docevals list [globs...]`
+
+Shows the resolved eval plan per page and runs nothing. This is the dry run for
+[named evals and suites](/docevals/evals/named-evals-and-suites/) — use it when a page's frontmatter,
+a referenced eval, and a suite could each contribute the same name.
+
+```console
+$ docevals list test/fixtures/pages/docs/actions/goTo.mdx
+test/fixtures/pages/docs/actions/goTo.mdx (suite: reference)
+  - no-future-promises [llm, regression, config]
+  - fresh-enough [tool:freshness, regression, config]
+  - readable [tool:reading-level, regression, config]
+  - frontmatter-valid [tool:docmeta, regression, config]
+
+1 pages, 4 evals resolved
+```
+
+Each line is `name [grader, type, source]`, where source is `config` or `page`.
+
+## `docevals generate [globs...]`
+
+Writes a check script for every `command` eval that has a plain-language assertion but no `command`,
+then records the command in frontmatter. See
+[Deterministic checks](/docevals/evals/deterministic-checks/).
+
+Exits 1 if any target failed to generate.
+
+## `docevals fill [globs...]`
+
+Proposes evals for each page from its content, gated on a self-reported confidence.
+
+| Flag | Effect |
+|---|---|
+| `--dry-run` | Report proposals without writing frontmatter. Run this first — it reports the cost of the whole pass before you spend it. |
+| `--confidence <n>` | Minimum confidence to write, 0–1. Overrides `fill.confidenceThreshold` (default `0.7`). Values above 1 are a usage error. |
+| `--max-cost <usd>` | Stop proposing past this spend. |
+| `--no-cache` | Bypass the proposal cache. |
+
+Raw proposals are cached **before** the confidence gate, so re-running at a different `--confidence`
+costs nothing.
+
+## `docevals promote [globs...]`
+
+Reviews llm-graded evals and reports which are expressible as deterministic checks. **Report-only by
+default**; `--write` applies the conversions. See
+[Promote to deterministic](/docevals/adopt/promote-to-deterministic/).
+
+## `docevals calibrate`
+
+Measures judge agreement against a human-verified golden set.
+
+| Flag | Effect |
+|---|---|
+| `--golden <dir>` | Golden set directory. Default `.docevals/golden`. |
+| `--runs <n>` | Ensemble runs per case. |
+| `--no-cache` | Bypass the judge response cache. |
+
+Exits 1 when agreement is below the threshold. See [Calibrate](/docevals/judge/calibrate/).
+
+## `docevals init`
+
+Writes a starter `docevals.config.yaml` in the working directory. Takes no options.
+
+## `docevals review [file] [eval] [verdict]`
+
+With no arguments, lists the evals awaiting a human verdict. With all three, records one.
+
+| Flag | Effect |
+|---|---|
+| `--reviewer <name>` | Reviewer recorded with the verdict. |
+| `--note <text>` | Optional note. |
+
+`verdict` is `pass` or `fail`. Supplying a file without an eval and verdict is a usage error. See
+[Human review](/docevals/judge/human-review/).
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Everything passed. |
+| `1` | Findings, errors, or a suite below its target pass rate. The author's problem. |
+| `2` | Operational or usage error — bad config, missing provider, malformed flag. Not the author's problem. |
+
+Full detail in [Output and exit codes](/docevals/reference/output-and-exit-codes/).
+
+{/* Verified by docevals itself during `verify-docs` (see .github/workflows/ci.yml),
+    against the committed fixture corpus. Config: .doc-detective.json. */}
+
+{/* step {"description":"The CLI lists all eight commands.","runShell":{"command":"npx docevals --help","exitCodes":[0],"stdio":"/list[\\s\\S]*run[\\s\\S]*generate[\\s\\S]*fill[\\s\\S]*promote[\\s\\S]*calibrate[\\s\\S]*init[\\s\\S]*review/"}} */}
+
+{/* step {"description":"`list` prints the resolved plan with grader, type, and source, and runs nothing.","runShell":{"command":"npx docevals list test/fixtures/pages/docs/actions/goTo.mdx","exitCodes":[0],"stdio":", regression, config]"}} */}
+
+{/* step {"description":"Exit 0 when every eval passes.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/find.mdx --deterministic-only --no-generate","exitCodes":[0]}} */}
+
+{/* step {"description":"Exit 1 when an eval fails.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate","exitCodes":[1]}} */}
+
+{/* step {"description":"Exit 2 for an operational error, distinct from a finding.","runShell":{"command":"npx docevals run -c does-not-exist.yaml","exitCodes":[2]}} */}
+
+{/* step {"description":"--confidence above 1 is a usage error.","runShell":{"command":"npx docevals fill --confidence 5 --dry-run","exitCodes":[2]}} */}

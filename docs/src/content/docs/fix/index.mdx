@@ -1,0 +1,148 @@
+---
+title: Fix a failing eval
+description: Your pull request went red on a docevals check. Work out which one, fix it, and move on.
+---
+
+You did not configure this check and you do not need to learn the tool. Start with the table.
+
+**docevals** runs quality checks — called **evals** — against documentation pages. Each eval is one
+assertion about a page, decided either by a script or by an LLM.
+
+## Which failure is this?
+
+Find your CI output in the left column.
+
+| What you see | What it is | What to do |
+|---|---|---|
+| A message with a **file and line**, like `error:4 [freshness/stale] …` | A script-based check | [Fix the line](#a-finding-with-a-line) |
+| A message with **reasoning but no line**, mentioning "LLM judge" | An LLM verdict | [Read the assertion](#an-llm-verdict) |
+| **`needs-review`** | Waiting on a person | [Not yours to fix](#needs-review) |
+| Something about a **stale `assertionHash`** | A generated script is out of date | [Not yours to fix](#stale-generated-script) |
+| **Exit code 2**, or "could not run" / missing key / bad config | The tool itself failed | [Not your fault](#exit-2) |
+
+The distinction that matters most: **exit 1 means a docs problem, exit 2 means a pipeline problem.**
+If you are looking at exit 2, stop and tell whoever owns CI.
+
+---
+
+## A finding with a line
+
+```text
+docs/actions/goTo.mdx
+  FAIL fresh-enough
+       error:4 [freshness/stale] Page last reviewed 937 days ago (max 365)
+```
+
+Read it as `severity:line [rule] message`. A script found something specific at line 4.
+
+- Go to that line, make the change the message describes, push.
+- `freshness/stale` means the page's review date is too old — update `last-reviewed` in the
+  frontmatter, **after** checking the page is actually still accurate.
+- Rules starting `MD…` are markdownlint; rules with a dot like `Vale.Spelling` are Vale.
+
+Only `error` fails the build. If your message says `warning` or `info`, that check is not what turned
+the build red — keep reading the log.
+
+---
+
+## An LLM verdict
+
+```text
+::error file=docs/tutorial.mdx,title=docevals: no-future-promises::LLM judge: fail (confidence 0.93). The "Coming in v3" section describes unreleased functionality.
+```
+
+No line number, because the judgement is about the page rather than a character position.
+
+**The rationale tells you what is wrong; the assertion tells you what was required.** Look both up:
+
+```bash
+npx docevals list docs/tutorial.mdx
+```
+
+That prints which evals apply. Find the named eval — here `no-future-promises` — in
+`docevals.config.yaml`, or inline in the page's own frontmatter. It looks like this:
+
+```yaml
+  no-future-promises:
+    assertion: The page makes no claims about unreleased or future functionality.
+    examples:
+      pass: Describes only shipped behavior.
+      fail: Says "coming soon" or references an unreleased version.
+```
+
+The `examples.fail` line is the useful one — it shows what violating this looks like. Between the
+rationale and that example, the offending sentence is usually obvious.
+
+If you genuinely disagree with the verdict, that is a conversation with whoever owns the eval, not a
+thing to work around. Say so in the pull request.
+
+---
+
+## `needs-review`
+
+The judge was not confident enough either way, so the eval is waiting on a person.
+
+**You cannot resolve this yourself** — it needs someone with standing to record a verdict. Ask
+whoever owns the docs quality checks in your repo; the command they run is
+`docevals review <file> <eval> pass|fail`.
+
+This is a legitimate outcome, not you having done something wrong.
+
+---
+
+## Stale generated script
+
+Some checks are scripts generated from a plain-language assertion. If someone edited the assertion
+without regenerating, the script no longer matches it.
+
+Not yours to fix unless you were the one who edited the assertion — in which case, regenerate:
+
+```bash
+npx docevals generate <the file>
+```
+
+and commit the updated script alongside your change.
+
+---
+
+## Exit 2
+
+Bad config, a missing provider key, a malformed flag. **This is not a docs problem and not your
+fault.** Tell whoever owns the pipeline. Re-running the job will not help.
+
+---
+
+## Reproduce it locally
+
+CI had a provider key and a warm cache; your laptop has neither. A naive local run either fails on a
+missing credential or costs money.
+
+Run the deterministic checks on just your file:
+
+```bash
+npx docevals run docs/your-page.mdx --deterministic-only
+```
+
+No API key needed, no cost. This covers everything except LLM verdicts.
+
+To see what applies to a page without running anything:
+
+```bash
+npx docevals list docs/your-page.mdx
+```
+
+Exit `0` means clean.
+
+---
+
+## Still stuck?
+
+- [FAQ](/docevals/fix/faq/) — the recurring questions
+- Ask whoever configured the check. A check that blocks contributors who cannot self-serve is a
+  problem with the check, and worth saying so.
+
+{/* Verified by docevals itself during `verify-docs`. Config: .doc-detective.json. */}
+
+{/* step {"description":"The local reproduction command runs with no API key and exits 0 on a clean page.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/find.mdx --deterministic-only --no-generate","exitCodes":[0]}} */}
+
+{/* step {"description":"`list` shows which evals apply to a page without running them.","runShell":{"command":"npx docevals list test/fixtures/pages/docs/actions/goTo.mdx","exitCodes":[0],"stdio":"evals resolved"}} */}

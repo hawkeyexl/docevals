@@ -40,6 +40,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "docs:verify": "node dist/cli.js run \"docs/src/content/docs/**/*.{md,mdx}\" -c docs/docevals.config.yaml",
+    "docs:refresh-cache": "node -e \"require('node:fs').rmSync('docs/.docevals-cache',{recursive:true,force:true})\" && npm run docs:verify",
     "commitlint": "commitlint --edit",
     "prepare": "husky",
     "prepublishOnly": "npm run build"
@@ -77,6 +79,7 @@
     "@semantic-release/release-notes-generator": "^14.1.1",
     "@types/node": "^26.0.1",
     "@types/picomatch": "^4.0.3",
+    "doc-detective": "^4.37.1",
     "husky": "^9.1.7",
     "semantic-release": "^25.0.8",
     "tsup": "^8.3.5",

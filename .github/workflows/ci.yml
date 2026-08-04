@@ -82,3 +82,72 @@ jobs:
             if (fm.length === 0) { console.error("no frontmatter-valid results"); process.exitCode = 1; }
             for (const x of fm) check(`${x.file} frontmatter-valid`, x.outcome, "pass");
           '
+
+  # Verify the documentation site: docevals runs over docs/src/content/docs/**,
+  # where the tool:doc-detective grader executes the inline test steps embedded
+  # in each page. A documented command that drifts from the code fails here.
+  #
+  # Unlike the fixture corpus above, this one must be all-green — the two gates
+  # are complementary, not redundant. See docs/content-strategy/
+  # information-architecture/proposed-ia.md and ADR 01004.
+  verify-docs:
+    runs-on: ubuntu-latest
+    # SECURITY GATE — do not remove. The doc-detective grader runs shell
+    # commands embedded in page *bodies*, so a fork pull request could execute
+    # its author's code on this runner. `scripts.allowFrontmatterCommands:
+    # false` in docs/docevals.config.yaml does NOT cover that path — it only
+    # gates commands declared in frontmatter. Restricting the job to same-repo
+    # pull requests is the complete answer.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm install --no-fund --no-audit
+      - run: npm run build
+
+      # Expose the freshly built CLI as the `docevals` command the docs invoke.
+      # `npm link` puts it on PATH for a bare `docevals ...`; `npm link
+      # @hawkeyexl/docevals` adds node_modules/.bin/docevals so `npx docevals
+      # ...` resolves the local build. dist/ is gitignored and the package is
+      # unpublished, so without these the documented commands have nothing to
+      # run.
+      - run: npm link
+      - run: npm link @hawkeyexl/docevals
+
+      # No ANTHROPIC_API_KEY is set, deliberately. The docs-page suite is
+      # deterministic today, and judged evals replay from the committed cache in
+      # docs/.docevals-cache/ once they join the suite. A cache miss surfaces as
+      # a provider error, so a green run here proves the fixtures are real.
+      # Guard against silent zero-coverage. A step with a typo'd key (`stdout`
+      # instead of `stdio`) is reported "isn't a valid step. Skipping." — and if
+      # every step on a page is invalid, doc-detective finds no tests, exits 0,
+      # and the eval passes. Green with nothing executed. Fail loudly instead.
+      - name: Assert every inline doc-detective step is valid
+        run: |
+          set -o pipefail
+          npx --no-install doc-detective --config .doc-detective.json --dry-run \
+            2>&1 | grep -v '^strict mode:' > dd-resolve.log || true
+          invalid=$(grep -c "isn't a valid step" dd-resolve.log || true)
+          if [ "${invalid:-0}" -ne 0 ]; then
+            echo "::error::${invalid} inline doc-detective step(s) failed to parse — they are silently skipped, not run."
+            grep "isn't a valid step" dd-resolve.log
+            exit 1
+          fi
+          echo "All inline steps parsed."
+
+      - name: Verify docs (docevals over the docs site)
+        run: npm run docs:verify -- --format github
+
+      # Catch Astro/Starlight breakage — a page can pass its evals and still
+      # fail to build (bad MDX, a broken component import). No second
+      # setup-node: Node 24 is already installed, and a second `cache: npm`
+      # step in the same job registers a competing post-run cache save.
+      - run: npm install --no-fund --no-audit
+        working-directory: docs
+      - run: npm run build
+        working-directory: docs
