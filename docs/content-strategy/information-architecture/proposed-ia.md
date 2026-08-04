@@ -149,7 +149,7 @@ in [`ia-gap-analysis.md`](ia-gap-analysis.md) §3.
 | `reference/cli.mdx` | `cuj-eval-library`, `cuj-bootstrap-corpus` | ★ | Every command and flag. |
 | `reference/configuration.mdx` | `cuj-eval-library`, `cuj-bound-cost-and-risk` | ★ | Every `docevals.config.yaml` key, type, and default — including provider blocks and pricing. |
 | `reference/frontmatter.mdx` | `cuj-eval-library`, `cuj-cheapen-evals`, `cuj-write-judgeable-assertions` | ★ | Every eval field; resolution order; `generated.assertionHash`. |
-| `reference/graders.mdx` | `cuj-orchestrate-tools` | ★ | Densest page on the site: every kind in the registry with its `options` table. |
+| `reference/graders.mdx` | `cuj-orchestrate-tools` | ★ | Densest page on the site: every kind in the registry with its `options` table. **Must state that `options.command` is a *partial* override for `tool:doc-detective`** — `--input` and `--exit-on-fail` are appended regardless, the latter because the grader cannot detect a failure without it (ADR 01005). A reader who assumes their array is the whole argv will be wrong. |
 | `reference/output-and-exit-codes.mdx` | `cuj-first-gate` | ★ | `human`/`json`/`markdown`/`github` shapes; exit codes. |
 | `reference/files-and-state.mdx` | `cuj-resolve-review` | P2 | `.docevals/` layout: caches, `reviews.yaml`, golden set, generated script paths. |
 | `reference/glossary.mdx` | — *(vocabulary)* | P1 | eval, grader, assertion, evidence, suite, ensemble, consensus, confidence zone, calibration, regression vs. capability. Disposition in §3. |

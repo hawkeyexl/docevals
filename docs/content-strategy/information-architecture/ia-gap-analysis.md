@@ -70,7 +70,7 @@ All 34 pages are new. `partial` means a section-index stub exists at that path w
 | `reference/cli.mdx` | new | 2 CUJs | Eight commands and their flags exist only in `--help` today. |
 | `reference/configuration.mdx` | new | 2 CUJs | Every config knob is currently undocumented outside the schema file. |
 | `reference/frontmatter.mdx` | new | 3 CUJs | The published schema needs prose; resolution order is invisible until it bites. |
-| `reference/graders.mdx` | new | `cuj-orchestrate-tools` | Nine grader kinds with per-kind `options`, documented nowhere. |
+| `reference/graders.mdx` | new | `cuj-orchestrate-tools` | Nine grader kinds with per-kind `options`, documented nowhere. Also owes the `tool:doc-detective` contract: `options.command` is a partial override, and a timeout is reported distinctly from a failure (ADR 01005). |
 | `reference/output-and-exit-codes.mdx` | new | `cuj-first-gate` | Four output formats; readers must be able to parse what they see. |
 
 ### P1 — depth (11)
