@@ -18,6 +18,7 @@ Every **behavior change** in docevals ships with an ADR here. The ADR records th
 | [01002](01002-take-inference-from-the-shared-library.md) | Take the inference layer from `@hawkeyexl/inference` | accepted |
 | [01003](01003-cuj-first-docs-site-and-content-strategy.md) | A CUJ-first documentation site, driven by a co-located content strategy | accepted |
 | [01004](01004-test-the-docs-through-docevals-itself.md) | Test the docs site through docevals itself, with committed cache fixtures | accepted |
+| [01005](01005-fix-the-doc-detective-adapter-invocation-and-finding-granularity.md) | Fix the Doc Detective adapter: invocation, failure detection, and finding granularity | accepted |
 
 ## To backfill
 
