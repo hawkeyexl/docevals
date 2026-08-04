@@ -138,7 +138,10 @@ describe("summary renderers reject an unknown format", () => {
     expect(() => renderFill(EMPTY_FILL, "xml" as never)).toThrow(DocevalsError);
   });
 
-  it("uses the same message shape as render and the CLI parser", () => {
+  // Same template as the CLI parser, but naming the parameter rather than the
+  // flag — a library caller passed `format`, not `--format`. Only the noun
+  // differs; asserting the literal here is what pins that.
+  it("uses render's message template with the parameter name, not the flag", () => {
     expect(() => renderList(EMPTY_LIST, "xml" as never)).toThrow(
       'format must be one of human | json, got "xml"',
     );
