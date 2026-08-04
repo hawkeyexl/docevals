@@ -250,6 +250,7 @@ Durable decisions behind the current shape. Backfill these into `adrs/` when tha
 | Convention | Enforced by |
 |---|---|
 | Build, tests, typecheck, dogfood run | [ci.yml](.github/workflows/ci.yml) — ubuntu + windows |
+| Docs correctness and publication | [docs.yml](.github/workflows/docs.yml) — verify, build, link check, deploy |
 | Commit messages | husky [`commit-msg`](.husky/commit-msg) hook locally, [commitlint.yml](.github/workflows/commitlint.yml) on PRs |
 | Version selection / release channels | [.releaserc.json](.releaserc.json) + [release.yml](.github/workflows/release.yml) |
 | ADRs | [adrs/](adrs) — convention and template; not machine-enforced |
@@ -288,6 +289,8 @@ The last unported convention was **docs impact** — doc-detective gates behavio
 - [.github/workflows/release.yml](.github/workflows/release.yml) — release pipeline (opt-in)
 - [.github/workflows/commitlint.yml](.github/workflows/commitlint.yml) — PR commit-message enforcement
 - [.github/workflows/ci.yml](.github/workflows/ci.yml) — build/test matrix, the fixture dogfood gate, and `verify-docs`
+- [.github/workflows/docs.yml](.github/workflows/docs.yml) — verify → build → link check → deploy to GitHub Pages (ADR 01006)
+- [scripts/check-docs-links.mjs](scripts/check-docs-links.mjs) — internal-link check over the built site
 - [.github/workflows/claude-pr-review.yml](.github/workflows/claude-pr-review.yml) — automatic review on every PR
 - [.github/workflows/claude.yml](.github/workflows/claude.yml) — interactive `@claude` in issues, PR comments, and reviews (trusted authors only)
 - [docevals.config.yaml](docevals.config.yaml) — the repo's own dogfood config (fixture corpus)
