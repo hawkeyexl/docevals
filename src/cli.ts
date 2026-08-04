@@ -131,9 +131,9 @@ program
     try {
       const report = await runRun(globs, {
         config: opts.config as string | undefined,
+        // parseFormatArg validated this at parse time; the cast only re-narrows
+        // from the `unknown` that the Record-typed options bag erases it to.
         format: opts.format as ReportFormat,
-        // parseFormatArg has already narrowed opts.format; the cast is only
-        // widening past Record<string, unknown> on the options bag.
         deterministicOnly: opts.deterministicOnly as boolean | undefined,
         llmOnly: opts.llmOnly as boolean | undefined,
         frontmatterCommands: opts.frontmatterCommands as boolean | undefined,

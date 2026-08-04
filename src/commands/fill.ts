@@ -12,7 +12,11 @@ import { loadConfig } from "../core/config.js";
 import { discoverPages, leadingFrontmatterFormat } from "../core/discover.js";
 import { resolvePages, type ResolvedPagePlan } from "../core/resolve.js";
 import { appendPageEvals, type NewEvalEntry } from "../core/frontmatter-edit.js";
-import type { SummaryFormat } from "../reporters/format.js";
+import {
+  parseFormat,
+  SUMMARY_FORMATS,
+  type SummaryFormat,
+} from "../reporters/format.js";
 import { costOfUsage, pricingFor } from "@hawkeyexl/inference";
 import {
   makeProvider,
@@ -296,6 +300,8 @@ export function renderFill(
   report: FillReport,
   format: SummaryFormat,
 ): string {
+  // See renderList — same reasoning, same public exposure via src/index.ts.
+  parseFormat(format, SUMMARY_FORMATS, "format");
   if (format === "json") return JSON.stringify(report, null, 2);
   const lines: string[] = [];
   const names = (evals: ProposedEval[]) =>

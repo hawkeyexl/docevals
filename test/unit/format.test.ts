@@ -9,7 +9,10 @@ import {
   SUMMARY_FORMATS,
 } from "../../src/reporters/format.js";
 import { render } from "../../src/reporters/index.js";
+import { renderList, type ListRun } from "../../src/commands/list.js";
+import { renderFill } from "../../src/commands/fill.js";
 import { DocevalsError } from "../../src/types.js";
+import type { FillReport } from "../../src/commands/fill.js";
 import type { EngineReport } from "../../src/core/engine.js";
 
 const EMPTY_REPORT: EngineReport = {
@@ -88,5 +91,51 @@ describe("render dispatch", () => {
   it("throws instead of returning undefined for an unknown format", () => {
     // Reachable from library consumers, who are not behind the CLI parser.
     expect(() => render(EMPTY_REPORT, "xml" as never)).toThrow(DocevalsError);
+  });
+});
+
+/**
+ * renderList, renderFill, and render are all exported from src/index.ts, so a
+ * library caller reaches them without the CLI parser in front. All three must
+ * reject an unknown format — a silent fall-through to the human renderer is
+ * the exact defect ADR 01007 exists to remove, and it does not stop being one
+ * because the caller is a library instead of the CLI.
+ */
+describe("summary renderers reject an unknown format", () => {
+  const EMPTY_LIST: ListRun = { plans: [], exitCode: 0 };
+  const EMPTY_FILL: FillReport = {
+    results: [],
+    threshold: 0.8,
+    costUsd: 0,
+    exitCode: 0,
+  };
+
+  it("renderList renders both declared formats", () => {
+    for (const f of SUMMARY_FORMATS) {
+      expect(typeof renderList(EMPTY_LIST, f)).toBe("string");
+    }
+  });
+
+  it("renderFill renders both declared formats", () => {
+    for (const f of SUMMARY_FORMATS) {
+      expect(typeof renderFill(EMPTY_FILL, f)).toBe("string");
+    }
+  });
+
+  it("renderList throws rather than silently emitting human output", () => {
+    expect(() => renderList(EMPTY_LIST, "xml" as never)).toThrow(DocevalsError);
+  });
+
+  it("renderFill throws rather than silently emitting human output", () => {
+    expect(() => renderFill(EMPTY_FILL, "xml" as never)).toThrow(DocevalsError);
+  });
+
+  it("rejects a run-only format, which would otherwise render as human", () => {
+    expect(() => renderList(EMPTY_LIST, "markdown" as never)).toThrow(
+      DocevalsError,
+    );
+    expect(() => renderFill(EMPTY_FILL, "markdown" as never)).toThrow(
+      DocevalsError,
+    );
   });
 });

@@ -79,14 +79,21 @@ a stack trace and exit 1 — the wrong code and the wrong presentation for a usa
 happens at parse time, so the value reaching each `.action()` is already narrowed and the casts are
 gone.
 
-`render()` additionally gains a `default:` branch that throws `DocevalsError`. This is not redundant
-with the CLI parser — it closes the library path, where `render(report, someString as ReportFormat)`
-previously returned `undefined`.
+The three render entry points additionally guard themselves. This is not redundant with the CLI
+parser: `render`, `renderList`, and `renderFill` are all exported from `src/index.ts`, so a library
+caller reaches them with no parser in front.
 
-`renderList` and `renderFill` are re-typed to `SummaryFormat` but keep their `format === "json"`
-test and human fallback. Their fallback is benign (a real report in the other shape, not
-`undefined`), the CLI can no longer hand them an unknown value, and adding a third format to either
-is a change to that function anyway.
+- `render()` gains a `default:` branch that throws, closing the path where
+  `render(report, someString as ReportFormat)` previously returned `undefined`.
+- `renderList` and `renderFill` are re-typed to `SummaryFormat` and call `parseFormat` on entry.
+
+Guarding all three rather than only `render()` is deliberate. The first draft of this decision
+guarded `render()` alone, on the grounds that the summary renderers' fallback is "benign" — a real
+report in the other shape rather than `undefined`. That reasoning does not survive contact with the
+actual failure: a library caller doing `renderFill(report, userFormat as SummaryFormat)` gets human
+output where it asked for JSON, with no error — which is precisely the silent degradation this ADR
+exists to remove. Being reached from a library instead of the CLI does not make it quieter. Three
+equally public functions taking the same flag's value should fail the same way.
 
 The error is a `DocevalsError`, so `fail()` prints `docevals: --format must be one of human | json,
 got "xml"` and exits 2.
@@ -96,7 +103,7 @@ got "xml"` and exits 2.
 - Good, because all three commands now agree with the documented contract and with each other.
 - Good, because the allowed values live in one place, next to the renderer they gate.
 - Good, because the `undefined` output from `render()` is unreachable from both the CLI and the
-  library.
+  library, and the summary renderers' human fallback is unreachable the same way.
 - Good, because `cli.ts` loses four `as` casts on `format`; the parser narrows the type instead of
   a cast asserting it.
 - Bad, because a script that today passes a bogus `--format` and tolerates human output starts
@@ -111,7 +118,7 @@ got "xml"` and exits 2.
 ### Confirmation
 
 - `test/unit/format.test.ts` pins `parseFormat` (every accepted value for both sets, rejection,
-  error type, and message content) and the `render()` `default:` guard.
+  error type, and message content) and the guards on all three render entry points.
 - `.github/workflows/ci.yml` asserts exit 2 for `list --format xml` through the built CLI on both
   ubuntu and windows, alongside the existing fixture dogfood run.
 - `docs/src/content/docs/reference/cli.mdx` carries inline Doc Detective steps asserting exit 2 for
@@ -151,6 +158,6 @@ A regression that restores the silent fallback fails the unit test, the dogfood 
 
 - Good, because there is exactly one enforcement point and it is closest to the data.
 - Bad, because the error surfaces *after* the work is done — `run` would discover a typo only after
-  a full judging pass, having spent tokens and money on a report it then refuses to print.
-- Bad, because `renderList`/`renderFill` would have to throw on a value their signature already
-  forbids, which reads as defensive noise in the common path.
+  a full judging pass, having spent tokens and money on a report it then refuses to print. This is
+  the decisive objection, and it is why the renderer guards adopted above are a *second* line rather
+  than the only one: they catch the library caller, but the CLI must still fail before spending.
