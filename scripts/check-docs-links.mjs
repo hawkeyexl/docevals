@@ -35,7 +35,10 @@ const pages = [];
 /** true / false for internal routes, null for anything not under BASE. */
 function resolvesOnDisk(href) {
   let route = href.split("#")[0].split("?")[0];
-  if (!route.startsWith(BASE)) return null;
+  // Match the base as a path segment, not a string prefix: a link to
+  // /docevals-v2/x must not be treated as base-relative and then reported
+  // broken.
+  if (route !== BASE && !route.startsWith(`${BASE}/`)) return null;
   route = route.slice(BASE.length) || "/";
   return (
     fs.existsSync(path.posix.join(DIST, route, "index.html")) ||

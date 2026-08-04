@@ -14,12 +14,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Least privilege for the deploy: read the repo, write Pages, mint the OIDC
-# token deploy-pages needs.
+# Least privilege by default. `pages: write` and the OIDC `id-token: write`
+# that deploy-pages needs are granted on the deploy job alone, so verify-docs —
+# which executes commands embedded in page bodies — and build never hold a token
+# that can publish.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # Only one Pages deploy at a time; let an in-flight run finish rather than
 # cancelling it (avoids leaving Pages in a half-deployed state).
@@ -61,12 +61,13 @@ jobs:
       - name: Assert every inline doc-detective step is valid
         run: |
           set -o pipefail
+          mkdir -p .tmp
           npx --no-install doc-detective --config .doc-detective.json --dry-run \
-            2>&1 | grep -v '^strict mode:' > dd-resolve.log || true
-          invalid=$(grep -c "isn't a valid step" dd-resolve.log || true)
+            2>&1 | grep -v '^strict mode:' > .tmp/dd-resolve.log || true
+          invalid=$(grep -c "isn't a valid step" .tmp/dd-resolve.log || true)
           if [ "${invalid:-0}" -ne 0 ]; then
             echo "::error::${invalid} inline doc-detective step(s) failed to parse — they are silently skipped, not run."
-            grep "isn't a valid step" dd-resolve.log
+            grep "isn't a valid step" .tmp/dd-resolve.log
             exit 1
           fi
           echo "All inline steps parsed."
@@ -106,10 +107,15 @@ jobs:
         with:
           path: docs/dist
 
-  # Deploy the uploaded artifact to GitHub Pages.
+  # Deploy the uploaded artifact to GitHub Pages. The only job that can publish,
+  # and the only one holding the tokens to do so.
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
