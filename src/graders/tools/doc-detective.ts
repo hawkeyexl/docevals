@@ -106,16 +106,56 @@ export function extractFailureReport(stdout: string): string | undefined {
   return block.length > 0 ? block : undefined;
 }
 
-/** Find the last JSON object in mixed stdout (Doc Detective logs then results). */
+/**
+ * Find the last JSON object in mixed stdout (Doc Detective logs, then results).
+ *
+ * Both ends are searched, because either can be buried in noise: the tool logs
+ * before the blob, and may print paths or summaries after it. Anchoring the end
+ * on the single last `}` in the whole string breaks as soon as anything
+ * trailing contains one — a `{runId}` path segment, an error line, a future
+ * reporter — because every candidate then over-runs the JSON and parsing fails
+ * for all of them, silently returning undefined.
+ *
+ * So: walk closing braces backwards from the end (bounded — this is a scan, not
+ * a parser) and opening braces forwards, and take the first pair that parses.
+ */
+const MAX_END_CANDIDATES = 12;
+
+/** Doc Detective may drive a browser; ten minutes is its own default ballpark. */
+const DEFAULT_TIMEOUT_MS = 600000;
+
+/** Cap on the failure report carried into a finding message. */
+const MAX_REPORT_CHARS = 600;
+
+/** Truncate on a line boundary so a failure entry is never cut mid-sentence. */
+function clampReport(report: string): string {
+  if (report.length <= MAX_REPORT_CHARS) return report;
+  const head = report.slice(0, MAX_REPORT_CHARS);
+  const lastNewline = head.lastIndexOf("\n");
+  const kept = lastNewline > 0 ? head.slice(0, lastNewline) : head;
+  return `${kept.trimEnd()}\n… (truncated)`;
+}
+
 export function lastJsonBlob(stdout: string): unknown {
-  const start = stdout.indexOf("{");
-  if (start < 0) return undefined;
-  for (let i = start; i >= 0 && i < stdout.length; i = stdout.indexOf("{", i + 1)) {
-    const candidate = stdout.slice(i, stdout.lastIndexOf("}") + 1);
-    try {
-      return JSON.parse(candidate);
-    } catch {
-      // keep scanning
+  const firstOpen = stdout.indexOf("{");
+  if (firstOpen < 0) return undefined;
+
+  const ends: number[] = [];
+  for (
+    let e = stdout.lastIndexOf("}");
+    e > firstOpen && ends.length < MAX_END_CANDIDATES;
+    e = stdout.lastIndexOf("}", e - 1)
+  ) {
+    ends.push(e);
+  }
+
+  for (const end of ends) {
+    for (let i = firstOpen; i >= 0 && i < end; i = stdout.indexOf("{", i + 1)) {
+      try {
+        return JSON.parse(stdout.slice(i, end + 1));
+      } catch {
+        // keep scanning
+      }
     }
   }
   return undefined;
@@ -144,13 +184,26 @@ export const docDetectiveGrader: Grader = {
       ];
       const result = await ctx.exec(cmd, {
         cwd: ctx.root,
-        timeoutMs: ev.timeoutMs ?? 600000,
+        timeoutMs: ev.timeoutMs ?? DEFAULT_TIMEOUT_MS,
       });
       if (result.spawnError) {
         findings.push({
           evalName: ev.name,
           file: plan.page.file,
           message: `Failed to run doc-detective: ${result.spawnError} (is it installed?)`,
+          severity: ev.severity,
+        });
+        continue;
+      }
+      // A timeout leaves code null, which would otherwise fall through to the
+      // nonzero-exit branch and report "doc-detective exited null". Doc
+      // Detective can drive a browser, so timeouts are a realistic outcome and
+      // deserve their own message — matching commandGrader.
+      if (result.timedOut) {
+        findings.push({
+          evalName: ev.name,
+          file: plan.page.file,
+          message: `doc-detective timed out after ${ev.timeoutMs ?? DEFAULT_TIMEOUT_MS}ms`,
           severity: ev.severity,
         });
         continue;
@@ -176,7 +229,7 @@ export const docDetectiveGrader: Grader = {
           file: plan.page.file,
           ruleId: report ? "doc-detective/step" : undefined,
           message: report
-            ? report.slice(0, 600)
+            ? clampReport(report)
             : `doc-detective exited ${result.code}: ${result.stderr.trim().slice(-300)}`,
           severity: ev.severity,
         });

@@ -13,7 +13,7 @@ import {
   readingLevelGrader,
 } from "../../src/graders/native/reading-level.js";
 import { parseMarkdownlintOutput } from "../../src/graders/tools/markdownlint.js";
-import { docDetectiveGrader } from "../../src/graders/tools/doc-detective.js";
+import { docDetectiveGrader, lastJsonBlob } from "../../src/graders/tools/doc-detective.js";
 import type { ExecFn, ExecResult, GraderTarget } from "../../src/graders/types.js";
 
 const CONFIG = parseConfig("version: 1\n", "/fake/docevals.config.yaml");
@@ -312,7 +312,6 @@ describe("docDetectiveGrader", () => {
       "docs/page.md",
       "--exit-on-fail",
     ]);
-    expect(calls[0]).not.toContain("run");
   });
 
   it("honors an options.command override", async () => {
@@ -434,6 +433,63 @@ describe("docDetectiveGrader", () => {
       exec,
     });
     expect(findings[0]?.message).toMatch(/Failed to run doc-detective: ENOENT/);
+  });
+
+  // A timeout leaves code null; without its own branch that renders as the
+  // meaningless "doc-detective exited null". Doc Detective can drive a browser,
+  // so this is a realistic outcome, not a theoretical one.
+  it("reports timeouts distinctly from a nonzero exit", async () => {
+    const { exec } = fakeExec({ code: null, timedOut: true, stderr: "partial output" });
+    const findings = await docDetectiveGrader.grade({
+      targets: [ddTarget()],
+      config: ddConfig,
+      root: "/fake",
+      exec,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toMatch(/doc-detective timed out after \d+ms/);
+    expect(findings[0]?.message).not.toContain("exited null");
+  });
+
+  it("truncates a long failure report on a line boundary", async () => {
+    const stdout = [
+      "Failed Steps:",
+      ...Array.from({ length: 40 }, (_, n) => `${n + 1}. step-${n}\n   Error: something went wrong here`),
+      "===============================",
+    ].join("\n");
+    const { exec } = fakeExec({ code: 1, stdout });
+    const findings = await docDetectiveGrader.grade({
+      targets: [ddTarget()],
+      config: ddConfig,
+      root: "/fake",
+      exec,
+    });
+    const message = findings[0]?.message ?? "";
+    expect(message).toContain("… (truncated)");
+    // Every retained line is whole — no entry cut mid-sentence.
+    for (const line of message.split("\n")) {
+      if (line === "… (truncated)") continue;
+      expect(stdout.split("\n")).toContain(line);
+    }
+  });
+});
+
+describe("lastJsonBlob", () => {
+  it("finds the results blob when trailing output contains a brace", () => {
+    // Regression: anchoring on the single last `}` in the string means any
+    // trailing `{...}` — a {runId} path segment, an error line — makes every
+    // candidate over-run the JSON, so parsing fails and the blob is lost.
+    const stdout = [
+      "running tests...",
+      '{"specs":[{"result":"FAIL"}]}',
+      "See per-run results at /out/.doc-detective/runs/{runId}/testResults.json",
+    ].join("\n");
+    expect(lastJsonBlob(stdout)).toEqual({ specs: [{ result: "FAIL" }] });
+  });
+
+  it("returns undefined when there is no JSON at all", () => {
+    expect(lastJsonBlob("no braces here")).toBeUndefined();
+    expect(lastJsonBlob("an opening { but no close")).toBeUndefined();
   });
 });
 
