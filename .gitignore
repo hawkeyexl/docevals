@@ -10,3 +10,10 @@ dist/
 
 # Report written by the CI dogfood gate; also produced by a local dogfood run.
 docevals-run.json
+
+# Doc Detective run output (see .doc-detective.json `output`). Written whenever
+# the tool:doc-detective grader runs over the docs corpus.
+# NOTE: docs/.docevals-cache/ is deliberately NOT ignored — it holds the
+# committed judge cache that lets verify-docs replay without an API key.
+# See adrs/01004-test-the-docs-through-docevals-itself.md.
+.doc-detective/

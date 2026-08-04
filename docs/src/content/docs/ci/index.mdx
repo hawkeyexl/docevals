@@ -1,0 +1,18 @@
+---
+title: Run it in CI
+description: Wire the eval gate into your pipeline, route on its exit codes, and bound what it can spend and execute.
+---
+
+Installing and operating the gate: recipes per CI platform, the exit-code contract, inline pull
+request annotations, cost ceilings, and the fork-safety rules.
+
+This section is planned and not yet written. It will cover:
+
+- A GitHub Actions recipe, plus GitLab CI, Jenkins, and pre-commit
+- Exit codes `0`, `1`, and `2` — and why `1` and `2` route to different people
+- `--format github` for inline pull request annotations
+- Cost ceilings and cache persistence between runs
+- Untrusted pull requests: what a content file can cause to execute, and why gating the job is the
+  only complete answer
+
+Until then, the [README](https://github.com/hawkeyexl/docevals#readme) lists the flags and exit codes.

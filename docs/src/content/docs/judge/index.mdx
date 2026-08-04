@@ -1,0 +1,19 @@
+---
+title: Trust the judge
+description: How verdicts are reached, how to measure whether the judge agrees with you, and what to do when it is unsure.
+---
+
+The answer to "why should a model be allowed to block our pipeline?" — the reproducibility
+guarantees, the ensemble, the confidence zones, and the calibration numbers that make the case.
+
+This section is planned and not yet written. It will cover:
+
+- What makes a verdict reproducible: temperature 0, pinned models, structured verdicts, caching
+- The ensemble and consensus — including that a `partial` verdict counts as a fail, and that errored
+  runs count against consensus rather than toward a silent pass
+- Confidence zones: auto-pass, auto-fail, and the human-review band between them
+- Calibrating against a human-verified golden set, and watching the false-positive rate
+- Choosing a provider, including options that need no API key or that stay on your own infrastructure
+
+Until then, the [README](https://github.com/hawkeyexl/docevals#readme) covers providers and
+calibration.

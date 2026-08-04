@@ -1,0 +1,32 @@
+---
+title: Reference
+description: Lookup shelf — commands, config keys, frontmatter fields, graders, and output formats.
+---
+
+Exhaustive detail the journey sections link into. Everything here is verified against the source and
+the test suite rather than described from memory.
+
+This section is planned and not yet written. It will cover:
+
+- **CLI** — every command and flag
+- **Configuration** — every `docevals.config.yaml` key, its type, and its default
+- **Frontmatter** — every eval field, and how page evals resolve against config evals and suites
+- **Graders** — every grader kind and its options
+- **Output and exit codes** — the `human`, `json`, `markdown`, and `github` formats
+- **Files and state** — what docevals writes, and where
+- **Glossary**
+
+Until then, `docevals --help` and the [README](https://github.com/hawkeyexl/docevals#readme) are the
+reference.
+
+{/* The commands above are executed by the tool:doc-detective grader during
+    `docevals run` over this site (see .github/workflows/ci.yml `verify-docs`),
+    against the committed fixture corpus. Config: .doc-detective.json. */}
+
+{/* step {"description":"`docevals --help` lists the commands this shelf documents.","runShell":{"command":"npx docevals --help","exitCodes":[0],"stdout":"/run.*list.*generate/s"}} */}
+
+{/* step {"description":"An all-passing run exits 0.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/find.mdx --deterministic-only --no-generate","exitCodes":[0]}} */}
+
+{/* step {"description":"A failing eval exits 1, distinct from an operational error.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate","exitCodes":[1]}} */}
+
+{/* step {"description":"A missing config is an operational error: exit 2, distinct from a finding.","runShell":{"command":"npx docevals run -c does-not-exist.yaml","exitCodes":[2]}} */}
