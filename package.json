@@ -44,7 +44,8 @@
     "docs:refresh-cache": "node -e \"require('node:fs').rmSync('docs/.docevals-cache',{recursive:true,force:true})\" && npm run docs:verify",
     "commitlint": "commitlint --edit",
     "prepare": "husky",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "docs:check-links": "node scripts/check-docs-links.mjs"
   },
   "keywords": [
     "documentation",

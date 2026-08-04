@@ -202,7 +202,7 @@ The content set is complete; these are not.
 
 | Item | Why it is not done | Blocking? |
 |---|---|---|
-| **GitHub Pages deployment** | The site builds and is verified in CI, but nothing publishes it. Deliberately separate — `docs.yml` in the sibling docmeta repo is the model. | Nothing ships to readers until this lands. |
+| ~~**GitHub Pages deployment**~~ | **Done** (ADR 01006). `docs.yml` runs verify → build → link check → deploy on every push to `main`; the site is live at <https://hawkeyexl.github.io/docevals/>. | — |
 | **LLM evals on the docs corpus** | The `docs-page` suite is deterministic-only. `docs-page-full` adds `no-future-promises`, `serves-one-journey`, and `readable`, and needs committed cache fixtures generated with a provider (`npm run docs:refresh-cache`). | No — but the prose quality of these pages is currently ungated. |
 | **Slimming the README** | Now unblocked: §1 maps every section to a destination that exists. | No. |
 | **`docevals list --format` validation** | An unknown `--format` on `list` exits 0 rather than erroring. Documented behavior is correct today; the inconsistency with `run` is a code question. | No. |
@@ -216,5 +216,7 @@ Ranked by likelihood, for whoever picks this up next:
    not catch a new flag that nobody documented. §4 is the guard — run it.
 2. **Captured output samples.** `output-and-exit-codes.mdx` embeds real run output. A reporter change
    makes those stale silently, since no step asserts against the pretty-printed form.
-3. **Cross-links.** 34 pages link to each other heavily. A rename breaks them and nothing currently
-   checks internal links on the built site.
+3. ~~**Cross-links.**~~ **Now guarded.** `scripts/check-docs-links.mjs` resolves every internal
+   `href` in the built site against `docs/dist` and runs in both `ci.yml` and `docs.yml`, so a
+   renamed route fails the pull request and blocks the deploy. 1,354 links checked, currently zero
+   broken.

@@ -49,18 +49,21 @@ Exit `1`. A docs regression, caught the way a test catches a code one.
 
 ## Documentation
 
-Full docs are in [`docs/`](docs/src/content/docs/) and build with Astro + Starlight.
+**<https://hawkeyexl.github.io/docevals/>**
+
+Published from `main` on every push, gated on docevals evaluating its own documentation — the
+commands these pages present are executed against the fixture corpus before the site ships.
 
 | Section | Covers |
 |---|---|
-| [Get started](docs/src/content/docs/get-started/index.mdx) | Install, first assertion, first finding |
-| [How docevals works](docs/src/content/docs/get-started/how-docevals-works.mdx) | The eval, the grader hierarchy, how a verdict is reached |
-| [Write evals](docs/src/content/docs/evals/index.mdx) | The frontmatter contract, assertion craft, deterministic checks, suites |
-| [Adopt at scale](docs/src/content/docs/adopt/index.mdx) | `fill`, retrofitting a legacy corpus, `promote` |
-| [Run it in CI](docs/src/content/docs/ci/index.mdx) | Recipes, exit codes, cost, and fork safety |
-| [Trust the judge](docs/src/content/docs/judge/index.mdx) | Ensemble, confidence zones, calibration, providers |
-| [Fix a failing eval](docs/src/content/docs/fix/index.mdx) | For contributors whose PR just went red |
-| [Reference](docs/src/content/docs/reference/index.mdx) | CLI, config, frontmatter, graders, output, state |
+| [Get started](https://hawkeyexl.github.io/docevals/get-started/) | Install, first assertion, first finding |
+| [How docevals works](https://hawkeyexl.github.io/docevals/get-started/how-docevals-works/) | The eval, the grader hierarchy, how a verdict is reached |
+| [Write evals](https://hawkeyexl.github.io/docevals/evals/) | The frontmatter contract, assertion craft, deterministic checks, suites |
+| [Adopt at scale](https://hawkeyexl.github.io/docevals/adopt/) | `fill`, retrofitting a legacy corpus, `promote` |
+| [Run it in CI](https://hawkeyexl.github.io/docevals/ci/) | Recipes, exit codes, cost, and fork safety |
+| [Trust the judge](https://hawkeyexl.github.io/docevals/judge/) | Ensemble, confidence zones, calibration, providers |
+| [Fix a failing eval](https://hawkeyexl.github.io/docevals/fix/) | For contributors whose PR just went red |
+| [Reference](https://hawkeyexl.github.io/docevals/reference/) | CLI, config, frontmatter, graders, output, state |
 
 To run the site locally:
 
@@ -82,7 +85,7 @@ cd docs && npm install && npm run dev
 | `docevals init` | Scaffold a starter config |
 
 Exit codes: `0` pass · `1` failures, errors, or a suite below target · `2` usage or operational
-error. Full flag reference in [the CLI docs](docs/src/content/docs/reference/cli.mdx).
+error. Full flag reference in [the CLI docs](https://hawkeyexl.github.io/docevals/reference/cli/).
 
 ## The published schema
 
