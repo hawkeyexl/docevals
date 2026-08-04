@@ -118,8 +118,8 @@ is the most common cause of a surprising red build — see
 
 {/* step {"description":"Exit 0: every eval passes.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/find.mdx --deterministic-only --no-generate","exitCodes":[0]}} */}
 
-{/* step {"description":"Exit 1: a finding, or a suite below its target.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate","exitCodes":[1],"stdout":"below target"}} */}
+{/* step {"description":"Exit 1: a finding, or a suite below its target.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate","exitCodes":[1],"stdio":"below target"}} */}
 
 {/* step {"description":"Exit 2: an operational error, distinct from a finding.","runShell":{"command":"npx docevals run -c does-not-exist.yaml","exitCodes":[2]}} */}
 
-{/* step {"description":"github format emits an ::error with file and line for a finding with a known line.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate --format github","exitCodes":[1],"stdout":"/::error file=.*,line=4,/"}} */}
+{/* step {"description":"github format emits an ::error with file and line for a finding with a known line.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate --format github","exitCodes":[1],"stdio":"/::error file=.*,line=4,/"}} */}

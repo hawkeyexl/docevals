@@ -116,6 +116,6 @@ contract, and the fork-safety rules are in [Run it in CI](/docevals/ci/).
 
 {/* Verified by docevals itself during `verify-docs`. Config: .doc-detective.json. */}
 
-{/* step {"description":"The deterministic path runs with no API key and reports a real finding.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate","exitCodes":[1],"stdout":"/freshness\\/stale/"}} */}
+{/* step {"description":"The deterministic path runs with no API key and reports a real finding.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate","exitCodes":[1],"stdio":"/freshness\\/stale/"}} */}
 
-{/* step {"description":"`list` shows the resolved plan without running anything.","runShell":{"command":"npx docevals list test/fixtures/pages/docs/actions/goTo.mdx","exitCodes":[0],"stdout":"evals resolved"}} */}
+{/* step {"description":"`list` shows the resolved plan without running anything.","runShell":{"command":"npx docevals list test/fixtures/pages/docs/actions/goTo.mdx","exitCodes":[0],"stdio":"evals resolved"}} */}

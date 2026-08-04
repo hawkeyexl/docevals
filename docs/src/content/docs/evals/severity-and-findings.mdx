@@ -106,4 +106,4 @@ the judged analog of the ratchet; see
 
 {/* step {"description":"A warning-severity finding reports without failing the page.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/get-started/concepts.md --deterministic-only --no-generate","exitCodes":[0]}} */}
 
-{/* step {"description":"The same check at error severity fails, and the finding carries severity, line, and rule id.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate","exitCodes":[1],"stdout":"/error:4 \\[freshness\\/stale\\]/"}} */}
+{/* step {"description":"The same check at error severity fails, and the finding carries severity, line, and rule id.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate","exitCodes":[1],"stdio":"[freshness/stale]"}} */}

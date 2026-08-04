@@ -132,4 +132,4 @@ from the code fails the build. That is how this site checks itself — see
 
 {/* step {"description":"A page with a pre-generated check script passes deterministically.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/find.mdx --deterministic-only --no-generate","exitCodes":[0]}} */}
 
-{/* step {"description":"A stale review date fails at error severity with a rule id and line.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate","exitCodes":[1],"stdout":"/freshness\\/stale/"}} */}
+{/* step {"description":"A stale review date fails at error severity with a rule id and line.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate","exitCodes":[1],"stdio":"/freshness\\/stale/"}} */}

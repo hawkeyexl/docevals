@@ -106,4 +106,4 @@ shown to work.
 
 {/* step {"description":"A clean run exits 0 so the job stays green.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/find.mdx --deterministic-only --no-generate --format github","exitCodes":[0]}} */}
 
-{/* step {"description":"A failure exits 1 and emits an ::error workflow command pinned to file and line.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate --format github","exitCodes":[1],"stdout":"/::error file=.*line=/"}} */}
+{/* step {"description":"A failure exits 1 and emits an ::error workflow command pinned to file and line.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate --format github","exitCodes":[1],"stdio":"/::error file=.*line=/"}} */}

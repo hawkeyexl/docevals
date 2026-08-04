@@ -128,6 +128,6 @@ behaves unlike its neighbours.
 
 {/* Verified by docevals itself during `verify-docs`. Config: .doc-detective.json. */}
 
-{/* step {"description":"`list` reports the suite a page resolved to and the source of each eval.","runShell":{"command":"npx docevals list test/fixtures/pages/docs/actions/goTo.mdx","exitCodes":[0],"stdout":"/suite: reference/"}} */}
+{/* step {"description":"`list` reports the suite a page resolved to and the source of each eval.","runShell":{"command":"npx docevals list test/fixtures/pages/docs/actions/goTo.mdx","exitCodes":[0],"stdio":"/suite: reference/"}} */}
 
-{/* step {"description":"A suite below its target pass rate fails the run.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate","exitCodes":[1],"stdout":"below target"}} */}
+{/* step {"description":"A suite below its target pass rate fails the run.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate","exitCodes":[1],"stdio":"below target"}} */}

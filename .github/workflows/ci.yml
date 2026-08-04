@@ -123,6 +123,23 @@ jobs:
       # deterministic today, and judged evals replay from the committed cache in
       # docs/.docevals-cache/ once they join the suite. A cache miss surfaces as
       # a provider error, so a green run here proves the fixtures are real.
+      # Guard against silent zero-coverage. A step with a typo'd key (`stdout`
+      # instead of `stdio`) is reported "isn't a valid step. Skipping." — and if
+      # every step on a page is invalid, doc-detective finds no tests, exits 0,
+      # and the eval passes. Green with nothing executed. Fail loudly instead.
+      - name: Assert every inline doc-detective step is valid
+        run: |
+          set -o pipefail
+          npx --no-install doc-detective --config .doc-detective.json --dry-run \
+            2>&1 | grep -v '^strict mode:' > dd-resolve.log || true
+          invalid=$(grep -c "isn't a valid step" dd-resolve.log || true)
+          if [ "${invalid:-0}" -ne 0 ]; then
+            echo "::error::${invalid} inline doc-detective step(s) failed to parse — they are silently skipped, not run."
+            grep "isn't a valid step" dd-resolve.log
+            exit 1
+          fi
+          echo "All inline steps parsed."
+
       - name: Verify docs (docevals over the docs site)
         run: npm run docs:verify -- --format github
 

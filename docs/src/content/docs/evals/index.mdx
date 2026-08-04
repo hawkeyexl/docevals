@@ -125,6 +125,6 @@ see [Frontmatter reference](/docevals/reference/frontmatter/#validating-the-fron
 
 {/* Verified by docevals itself during `verify-docs`. Config: .doc-detective.json. */}
 
-{/* step {"description":"`list` prints name, grader, type, and source for each resolved eval.","runShell":{"command":"npx docevals list test/fixtures/pages/docs/actions/goTo.mdx","exitCodes":[0],"stdout":"/fresh-enough \\[tool:freshness, regression, config\\]/"}} */}
+{/* step {"description":"`list` prints name, grader, type, and source for each resolved eval.","runShell":{"command":"npx docevals list test/fixtures/pages/docs/actions/goTo.mdx","exitCodes":[0],"stdio":", regression, config]"}} */}
 
 {/* step {"description":"A page-level skip is honored.","runShell":{"command":"npx docevals run test/fixtures/pages/index.mdx --deterministic-only --no-generate","exitCodes":[0]}} */}

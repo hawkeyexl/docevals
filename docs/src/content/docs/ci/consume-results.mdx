@@ -78,7 +78,7 @@ capability suite's rate is the actual measure of a quality goal spreading. See
 The package exports the frontmatter schema for consumers that validate pages themselves:
 
 ```js
-import { frontmatterSchema, frontmatterSchemaPath } from "docevals";
+import { frontmatterSchema, frontmatterSchemaPath } from "@hawkeyexl/docevals";
 ```
 
 `frontmatterSchema` is the parsed schema object; `frontmatterSchemaPath` is its resolved path on
@@ -97,4 +97,6 @@ code rather than re-deriving pass/fail from the report — and keep `1` and `2` 
 
 {/* Verified by docevals itself during `verify-docs`. Config: .doc-detective.json. */}
 
-{/* step {"description":"--format json emits a parseable object carrying summary counts and the exit code.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate --format json","exitCodes":[1],"stdout":"/\"exitCode\": 1/"}} */}
+{/* step {"description":"--format json emits a parseable object carrying summary counts and the exit code.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate --format json","exitCodes":[1],"stdio":"/\"exitCode\": 1/"}} */}
+
+{/* step {"description":"The documented import specifier resolves and exports both schema symbols.","runShell":{"command":"node --input-type=module -e \"import('@hawkeyexl/docevals').then(m=>{if(!m.frontmatterSchema||!m.frontmatterSchemaPath)throw new Error('missing export');console.log('exports ok')}).catch(e=>{console.error(e);process.exit(2)})\"","exitCodes":[0],"stdio":"exports ok"}} */}

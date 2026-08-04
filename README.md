@@ -94,7 +94,7 @@ docmeta validate --schema node_modules/@hawkeyexl/docevals/schemas/frontmatter-0
 ```
 
 ```js
-import { frontmatterSchema, frontmatterSchemaPath } from "docevals";
+import { frontmatterSchema, frontmatterSchemaPath } from "@hawkeyexl/docevals";
 ```
 
 ## Contributing
