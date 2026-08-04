@@ -13,7 +13,14 @@ import { runPromote } from "./commands/promote.js";
 import { listReviews, renderReviews, runReview } from "./commands/review.js";
 import { runCalibrate, renderCalibration } from "./commands/calibrate.js";
 import { runInit } from "./commands/init.js";
-import { render, type ReportFormat } from "./reporters/index.js";
+import {
+  render,
+  parseFormat,
+  REPORT_FORMATS,
+  SUMMARY_FORMATS,
+  type ReportFormat,
+  type SummaryFormat,
+} from "./reporters/index.js";
 
 const pkg = JSON.parse(
   readFileSync(
@@ -59,19 +66,40 @@ function parseFloatArg(name: string) {
   };
 }
 
+/**
+ * Commander argument parser for `-f/--format` (ADR 01007). Routes through
+ * `fail()` for the same reason the numeric parsers do: commander only special-
+ * cases InvalidArgumentError, so any other exception escapes `program.parse()`
+ * uncaught — a stack trace and exit 1, when a bad flag owes exit 2.
+ */
+function parseFormatArg<T extends string>(name: string, allowed: readonly T[]) {
+  return (value: string): T => {
+    try {
+      return parseFormat(value, allowed, name);
+    } catch (e) {
+      fail(e);
+    }
+  };
+}
+
 program
   .command("list")
   .description("Show the resolved eval plan per page without running anything")
   .argument("[globs...]", "File globs (default: config files.include)")
   .option("-c, --config <path>", "Path to docevals.config.yaml")
-  .option("-f, --format <format>", "Output format: human | json", "human")
-  .action((globs: string[], opts: { config?: string; format: string }) => {
+  .option(
+    "-f, --format <format>",
+    "Output format: human | json",
+    parseFormatArg("--format", SUMMARY_FORMATS),
+    "human" as SummaryFormat,
+  )
+  .action((globs: string[], opts: { config?: string; format: SummaryFormat }) => {
     try {
       const run = runList(globs, {
         config: opts.config,
-        format: opts.format as "human" | "json",
+        format: opts.format,
       });
-      console.log(renderList(run, opts.format as "human" | "json"));
+      console.log(renderList(run, opts.format));
       process.exitCode = run.exitCode;
     } catch (e) {
       fail(e);
@@ -86,7 +114,8 @@ program
   .option(
     "-f, --format <format>",
     "Output format: human | json | markdown | github",
-    "human",
+    parseFormatArg("--format", REPORT_FORMATS),
+    "human" as ReportFormat,
   )
   .option("--deterministic-only", "Run only command/tool graders, skip the LLM judge")
   .option("--llm-only", "Run only LLM-judged evals, skip deterministic graders")
@@ -103,6 +132,8 @@ program
       const report = await runRun(globs, {
         config: opts.config as string | undefined,
         format: opts.format as ReportFormat,
+        // parseFormatArg has already narrowed opts.format; the cast is only
+        // widening past Record<string, unknown> on the options bag.
         deterministicOnly: opts.deterministicOnly as boolean | undefined,
         llmOnly: opts.llmOnly as boolean | undefined,
         frontmatterCommands: opts.frontmatterCommands as boolean | undefined,
@@ -161,7 +192,12 @@ program
   )
   .argument("[globs...]", "File globs (default: config files.include)")
   .option("-c, --config <path>", "Path to docevals.config.yaml")
-  .option("-f, --format <format>", "Output format: human | json", "human")
+  .option(
+    "-f, --format <format>",
+    "Output format: human | json",
+    parseFormatArg("--format", SUMMARY_FORMATS),
+    "human" as SummaryFormat,
+  )
   .option("--dry-run", "Report proposals without writing frontmatter")
   .option(
     "--confidence <n>",
@@ -187,7 +223,7 @@ program
         provider: opts.provider as string | undefined,
         model: opts.model as string | undefined,
       });
-      console.log(renderFill(report, opts.format as "human" | "json"));
+      console.log(renderFill(report, opts.format as SummaryFormat));
       process.exitCode = report.exitCode;
     } catch (e) {
       fail(e);

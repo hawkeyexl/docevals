@@ -83,6 +83,34 @@ jobs:
             for (const x of fm) check(`${x.file} frontmatter-valid`, x.outcome, "pass");
           '
 
+      # ADR 01007. An unrecognized --format used to fall through to the human
+      # renderer (list, fill) or print the literal string "undefined" (run), in
+      # both cases exiting 0. Assert the usage-error contract through the built
+      # CLI, on both runners, for every command that takes the flag.
+      - name: Dogfood usage errors (--format validation)
+        shell: bash
+        run: |
+          check_two() {
+            set +e
+            out=$("$@" 2>&1)
+            code=$?
+            set -e
+            if [ "$code" -ne 2 ]; then
+              echo "Expected exit 2 from: $* — got $code"
+              echo "$out"
+              exit 1
+            fi
+            case "$out" in
+              *"must be one of"*) ;;
+              *) echo "Expected an allowed-set message from: $* — got: $out"; exit 1 ;;
+            esac
+          }
+          check_two node dist/cli.js list test/fixtures/pages/docs/actions/find.mdx --format xml
+          check_two node dist/cli.js run test/fixtures/pages/docs/actions/find.mdx --deterministic-only --format xml
+          check_two node dist/cli.js fill --dry-run --format xml
+          # markdown is a `run` format; `list` must reject it, not fall back.
+          check_two node dist/cli.js list test/fixtures/pages/docs/actions/find.mdx --format markdown
+
   # Verify the documentation site: docevals runs over docs/src/content/docs/**,
   # where the tool:doc-detective grader executes the inline test steps embedded
   # in each page. A documented command that drifts from the code fails here.

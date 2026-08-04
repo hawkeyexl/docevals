@@ -7,10 +7,11 @@ import pc from "picocolors";
 import { loadConfig } from "../core/config.js";
 import { discoverPages } from "../core/discover.js";
 import { resolvePages, type ResolvedPagePlan } from "../core/resolve.js";
+import type { SummaryFormat } from "../reporters/format.js";
 
 export interface ListOptions {
   config?: string;
-  format?: "human" | "json";
+  format?: SummaryFormat;
   cwd?: string;
 }
 
@@ -31,7 +32,7 @@ export function runList(globs: string[], options: ListOptions = {}): ListRun {
   return { plans, exitCode: hasErrors ? 1 : 0 };
 }
 
-export function renderList(run: ListRun, format: "human" | "json"): string {
+export function renderList(run: ListRun, format: SummaryFormat): string {
   if (format === "json") {
     return JSON.stringify(
       run.plans.map((p) => ({

@@ -14,7 +14,7 @@ Commands that operate on pages take **positional globs**. With none given, the c
 | Flag | Commands | Meaning |
 |---|---|---|
 | `-c, --config <path>` | all except `init` | Path to `docevals.config.yaml`. Without it, docevals looks for that filename in the working directory; with no file at all, built-in defaults apply and there are no named evals or suites. |
-| `-f, --format <format>` | `list`, `run`, `fill` | Output format. `run` accepts `human`, `json`, `markdown`, `github`; `list` and `fill` accept `human` and `json`. |
+| `-f, --format <format>` | `list`, `run`, `fill` | Output format. `run` accepts `human`, `json`, `markdown`, `github`; `list` and `fill` accept `human` and `json`. Anything else — including `run`'s `markdown` passed to `list` — is a usage error: **exit 2**, allowed set in the message. See [Output and exit codes](/docevals/reference/output-and-exit-codes/#which-formats-each-command-accepts). |
 | `--provider <name>` | `run`, `generate`, `fill`, `promote`, `calibrate` | `anthropic`, `openai`, or `claude-cli`. Overrides `provider.default`. |
 | `--model <model>` | same as above | Overrides the model for the selected provider. |
 
@@ -136,3 +136,11 @@ Full detail in [Output and exit codes](/docevals/reference/output-and-exit-codes
 {/* step {"description":"Exit 2 for an operational error, distinct from a finding.","runShell":{"command":"npx docevals run -c does-not-exist.yaml","exitCodes":[2]}} */}
 
 {/* step {"description":"--confidence above 1 is a usage error.","runShell":{"command":"npx docevals fill --confidence 5 --dry-run","exitCodes":[2]}} */}
+
+{/* step {"description":"An unknown --format is a usage error on run, and the message names the allowed set.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/find.mdx --deterministic-only --format xml","exitCodes":[2],"stdio":"/must be one of human \\| json \\| markdown \\| github/"}} */}
+
+{/* step {"description":"list rejects an unknown --format the same way, with its own narrower set.","runShell":{"command":"npx docevals list test/fixtures/pages/docs/actions/find.mdx --format xml","exitCodes":[2],"stdio":"/must be one of human \\| json/"}} */}
+
+{/* step {"description":"list rejects a format that is valid only for run, rather than falling back to human.","runShell":{"command":"npx docevals list test/fixtures/pages/docs/actions/find.mdx --format markdown","exitCodes":[2]}} */}
+
+{/* step {"description":"fill rejects an unknown --format before doing any work.","runShell":{"command":"npx docevals fill --dry-run --format xml","exitCodes":[2]}} */}
