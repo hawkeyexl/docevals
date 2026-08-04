@@ -9,13 +9,13 @@ success_criteria: >
   A recorded verdict with an author and a rationale that unblocks the pull request, persists for
   future runs, and self-invalidates when the page changes.
 steps:
-  - { stage: "See which evals are waiting on a person", doc: docs/src/content/docs/judge/human-review.mdx, exists: false, note: "[GAP] docevals review with no arguments lists them" }
-  - { stage: "Understand why this one landed here", doc: docs/src/content/docs/judge/index.mdx, exists: partial, note: "[GAP] section-index stub only; a split ensemble or an errored run" }
-  - { stage: "Record a verdict", doc: docs/src/content/docs/judge/human-review.mdx, exists: false, note: "[GAP] docevals review <file> <eval> <pass|fail> --reviewer --note" }
-  - { stage: "Know when the verdict expires", doc: docs/src/content/docs/judge/human-review.mdx, exists: false, note: "[GAP] reviews self-invalidate when the page changes" }
-  - { stage: "Decide whether review should block the build", doc: docs/src/content/docs/ci/exit-codes-and-annotations.mdx, exists: false, note: "[GAP] --fail-on-review" }
-  - { stage: "Fix the cause if it keeps happening", doc: docs/src/content/docs/evals/write-good-assertions.mdx, exists: false, note: "[GAP] a repeat offender is a vague assertion" }
-  - { stage: "Look up where verdicts are stored", doc: docs/src/content/docs/reference/files-and-state.mdx, exists: false, note: "[GAP] .docevals/reviews.yaml" }
+  - { stage: "See which evals are waiting on a person", doc: docs/src/content/docs/judge/human-review.mdx, exists: true }
+  - { stage: "Understand why this one landed here", doc: docs/src/content/docs/judge/index.mdx, exists: true }
+  - { stage: "Record a verdict", doc: docs/src/content/docs/judge/human-review.mdx, exists: true }
+  - { stage: "Know when the verdict expires", doc: docs/src/content/docs/judge/human-review.mdx, exists: true }
+  - { stage: "Decide whether review should block the build", doc: docs/src/content/docs/ci/exit-codes-and-annotations.mdx, exists: true }
+  - { stage: "Fix the cause if it keeps happening", doc: docs/src/content/docs/evals/write-good-assertions.mdx, exists: true }
+  - { stage: "Look up where verdicts are stored", doc: docs/src/content/docs/reference/files-and-state.mdx, exists: true }
 ---
 
 # CUJ: Resolve an eval that landed in human review
@@ -56,4 +56,4 @@ Note that [Theo](../personas/theo-contributor.md) *encounters* this zone in
 [`cuj-fix-red-check`](cuj-fix-red-check.md) and cannot resolve it — being told to escalate, and to
 whom, is his correct outcome.
 
-**Current friction / gap.** Seven steps, seven gaps.
+**Status.** All 7 steps are served by written pages (5 distinct). Re-check this when the journey changes: a step whose `doc` no longer resolves, or a new step with no page behind it, is the signal that this journey has drifted ahead of the docs.

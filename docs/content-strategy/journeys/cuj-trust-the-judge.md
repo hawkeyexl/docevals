@@ -9,13 +9,13 @@ success_criteria: >
   A calibration report showing agreement above the threshold and a false-positive rate below the
   alert level, which the reader can hand to a skeptic and be believed.
 steps:
-  - { stage: "Understand what makes a verdict reproducible", doc: docs/src/content/docs/judge/index.mdx, exists: partial, note: "[GAP] section-index stub only; temperature 0, pinned models, structured verdicts" }
-  - { stage: "See how several runs become one verdict", doc: docs/src/content/docs/judge/index.mdx, exists: partial, note: "[GAP] ensemble; partial counts as fail; errored runs count against consensus" }
-  - { stage: "Learn where auto-pass ends and human review begins", doc: docs/src/content/docs/judge/index.mdx, exists: partial, note: "[GAP] confidence zones" }
-  - { stage: "Build a golden set of human-verified cases", doc: docs/src/content/docs/judge/calibrate.mdx, exists: false, note: "[GAP] 20-50 cases in .docevals/golden" }
-  - { stage: "Measure agreement", doc: docs/src/content/docs/judge/calibrate.mdx, exists: false, note: "[GAP] below 70% exits 1: refine assertions, not the grader" }
-  - { stage: "Watch the false-positive rate", doc: docs/src/content/docs/judge/calibrate.mdx, exists: false, note: "[GAP] judge.falsePositiveAlert" }
-  - { stage: "Choose a provider and pin a model", doc: docs/src/content/docs/judge/choose-a-provider.mdx, exists: false, note: "[GAP] anthropic, openai-compatible, claude-cli; and self-hosting for security review" }
+  - { stage: "Understand what makes a verdict reproducible", doc: docs/src/content/docs/judge/index.mdx, exists: true }
+  - { stage: "See how several runs become one verdict", doc: docs/src/content/docs/judge/index.mdx, exists: true }
+  - { stage: "Learn where auto-pass ends and human review begins", doc: docs/src/content/docs/judge/index.mdx, exists: true }
+  - { stage: "Build a golden set of human-verified cases", doc: docs/src/content/docs/judge/calibrate.mdx, exists: true }
+  - { stage: "Measure agreement", doc: docs/src/content/docs/judge/calibrate.mdx, exists: true }
+  - { stage: "Watch the false-positive rate", doc: docs/src/content/docs/judge/calibrate.mdx, exists: true }
+  - { stage: "Choose a provider and pin a model", doc: docs/src/content/docs/judge/choose-a-provider.mdx, exists: true }
 ---
 
 # CUJ: Prove the judge is trustworthy
@@ -60,5 +60,4 @@ The provider step closes a loop opened in [`cuj-ci-wire`](cuj-ci-wire.md) and an
 question the lead audience will face: an OpenAI-compatible `baseUrl` reaches a self-hosted endpoint,
 and `claude-cli` needs no API key at all.
 
-**Current friction / gap.** Seven steps, seven gaps. Three land on `judge/index.mdx`, which exists
-only as a section stub.
+**Status.** All 7 steps are served by written pages (3 distinct). Re-check this when the journey changes: a step whose `doc` no longer resolves, or a new step with no page behind it, is the signal that this journey has drifted ahead of the docs.

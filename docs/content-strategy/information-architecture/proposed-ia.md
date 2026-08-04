@@ -7,6 +7,8 @@ excludes: [README.md, adrs/, docs/content-strategy/]
 derived_from: ../journeys/
 companion: ia-gap-analysis.md
 page_count: 34
+pages_written: 34
+status: complete
 priorities: { P0: 18, P1: 11, P2: 5 }
 ---
 
@@ -14,8 +16,9 @@ priorities: { P0: 18, P1: 11, P2: 5 }
 
 **Scope:** the structure of the published site — everything under `docs/src/content/docs/`. It does
 not cover the repo README (a hook and a pointer, not a docs surface), the ADRs, or this strategy
-directory. **This is a proposal**: it defines the target tree and the content set. It does not edit
-navigation or write pages.
+directory. **This was a proposal; it is now the built structure.** All 34 pages are written and the seven
+sections below are live. It remains the register: a page not listed here should not exist, and a
+page listed here that stops resolving is a defect.
 
 **Method — CUJ-first, not content-first.** Sections are derived from what the
 [journeys](../journeys/_overview.md) require, in the order they require it, not from the topics the

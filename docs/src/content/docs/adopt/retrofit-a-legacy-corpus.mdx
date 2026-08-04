@@ -1,0 +1,124 @@
+---
+title: Retrofit a legacy corpus
+description: Get thousands of unmeasured pages onto a ratchet without a day-one wall of red.
+---
+
+Point an honest quality bar at a corpus that has never been measured and nearly everything fails at
+once. The result is accurate and useless: unmergeable, untriageable, and it teaches your team that
+the tool is wrong rather than that the docs are.
+
+The instinct that follows is to soften the assertions until the build goes green. **That is the
+failure this page exists to prevent**, because it is irreversible in practice — an assertion weakened
+to accommodate the corpus permanently encodes the corpus as the standard, and nobody ever tightens it
+back.
+
+## The inversion
+
+> Keep the assertions honest. Lower the **severity** instead.
+
+Everything below is a way of applying that.
+
+## 1. Decide what should not be evaluated at all
+
+Triage first. Deprecated sections, generated reference, and archives should be **excluded**, not
+fixed.
+
+```yaml
+files:
+  include: ["docs/**/*.{md,mdx}"]
+  exclude:
+    - "**/node_modules/**"
+    - "docs/archive/**"
+    - "docs/api/generated/**"
+```
+
+Per page:
+
+```yaml
+---
+title: Deprecated integration guide
+evals:
+  skip: true
+---
+```
+
+This is a legitimate first step, not giving up. A reader who feels that excluding is cheating will
+instead spend a week fixing content nobody reads.
+
+## 2. Propose evals one directory at a time
+
+```bash
+npx docevals fill --dry-run --max-cost 5 docs/how-to/
+```
+
+Batching keeps the review reviewable and the spend visible. See
+[Bootstrap a corpus](/docevals/adopt/).
+
+## 3. Enter at warning severity
+
+```yaml
+evals:
+  readable:
+    assertion: Page prose reads below grade 12.
+    grader: tool:reading-level
+    options: { maxGrade: 12 }
+    severity: warning        # reports everywhere, blocks nowhere
+```
+
+Findings appear in every report and every PR annotation. Nothing fails. You now have a burn-down list
+instead of a broken build — and the assertion still says what you actually mean.
+
+## 4. Use a capability suite for the judged evals
+
+Severity is for deterministic graders. The judged analog is the suite target:
+
+```yaml
+suites:
+  how-to-adopting:
+    targetPassRate: 0.6      # where the corpus is today
+    evals: [explains-why-before-how, no-future-promises]
+```
+
+Set the target near the current rate, then raise it as pages improve. "60% of how-to pages explain
+why before how, and last quarter it was 45%" is a real report. See
+[Regression vs capability](/docevals/evals/regression-vs-capability/).
+
+## 5. Burn down one section
+
+Pick the section that matters most — usually the one with the most traffic, not the most findings.
+Fix its pages. [Fix a failing eval](/docevals/fix/) is the page to hand contributors.
+
+## 6. Ratchet that section to error
+
+```yaml
+evals:
+  - use: readable
+    severity: error          # this section is done; hold the line
+```
+
+Per-page and per-section overrides mean you ratchet where the work is finished without waiting for
+the whole corpus. Every step is small, green, and mergeable.
+
+## 7. Make the survivors cheap
+
+A retrofitted corpus is disproportionately llm-graded, because `fill` proposes llm evals by
+construction. Before the recurring cost becomes the story, push them down the hierarchy —
+[Promote to deterministic](/docevals/adopt/promote-to-deterministic/).
+
+## What good looks like at the end of a quarter
+
+- One section gated at `error`, holding.
+- The rest reporting at `warning`, with a findings count that is visibly falling.
+- Capability targets set near reality and rising.
+- **No assertion weakened to get there.**
+
+## The anti-pattern, stated plainly
+
+| Tempting | Do instead |
+|---|---|
+| Loosen the assertion until the build is green | Keep it; drop severity to `warning` |
+| Set every suite target to what today's corpus scores | Set it slightly above, and raise it |
+| Run `fill` over everything and merge in one PR | Batch by directory |
+| Delete the check because it "doesn't fit our docs" | Ask whether the check is right and the docs are wrong |
+
+The first column produces a green build immediately and a meaningless standard permanently.

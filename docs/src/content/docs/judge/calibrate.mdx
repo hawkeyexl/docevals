@@ -1,0 +1,109 @@
+---
+title: Calibrate the judge
+description: Score the judge against your own human-verified cases, and get a number you can hand a skeptic.
+---
+
+Calibration turns "we think the judge is reasonable" into an agreement rate and a false-positive
+rate. That artifact — not the mechanics — is what ends the argument about whether a model should gate
+a build.
+
+## Build a golden set
+
+20–50 human-verified cases in `.docevals/golden/*.yaml`. Each is a verdict a careful reviewer
+reached:
+
+```yaml
+- file: docs/install.md
+  eval: no-future-promises
+  expected: pass
+  rationale: Mentions only shipped features.
+- file: docs/roadmap.md
+  eval: no-future-promises
+  expected: fail
+  rationale: Describes Q3 features as though they exist.
+```
+
+`rationale` is for the humans maintaining the set; it is not sent to the judge.
+
+**Include the hard cases.** A golden set of obvious passes measures nothing. The value is in the
+borderline pages where two reviewers had to talk it through — those are exactly where an ambiguous
+assertion shows up as disagreement.
+
+Aim for a realistic mix of `pass` and `fail`. A set that is 90% passes will report high agreement
+from a judge that simply passes everything.
+
+## Run it
+
+```bash
+npx docevals calibrate
+```
+
+```bash
+npx docevals calibrate --golden .docevals/golden --runs 3
+```
+
+Reports judge/human agreement and the false-positive rate. **Below 70% agreement it exits 1.**
+
+## What to do when it exits 1
+
+Refine the **assertions**, not the grader.
+
+Low agreement is nearly always evidence that assertions are ambiguous — if the judge cannot reproduce
+your reviewers, it is usually because your reviewers were relying on shared context the assertion
+does not state. Reaching for model tuning here wastes a week.
+
+The loop that works:
+
+1. Find the cases where judge and human disagree.
+2. Read the assertion for each, against the two-reviewer test in
+   [Write good assertions](/docevals/evals/write-good-assertions/).
+3. Add or sharpen `evidence` and `examples.fail`.
+4. Re-run.
+
+`examples.fail` is usually the fix. A disagreement is two parties drawing the boundary in different
+places; the failing example is where you write the boundary down.
+
+## False positives matter more than accuracy
+
+```yaml
+judge:
+  falsePositiveAlert: 0.15
+```
+
+Calibration alerts when the false-positive rate exceeds this.
+
+The asymmetry is deliberate. A check that **fails good pages** gets disabled within a week — every
+author who was blocked for no reason lobbies against it. A check that misses a few bad pages survives
+indefinitely. Optimise accordingly: when tuning zones or assertions, prefer the change that reduces
+false positives even at some cost to recall.
+
+## Recalibrate when anything upstream changes
+
+The golden set is a fixture, and fixtures go stale:
+
+- **Model or provider change.** Different model, different verdicts. Re-run before trusting the gate.
+- **Assertion changes.** The rewrite you made to fix agreement needs to be measured.
+- **Judge prompt revisions.** These invalidate cached verdicts by design.
+- **Corpus drift.** If your docs changed a lot, cases referencing old pages may no longer mean what
+  they meant.
+
+Running `calibrate` in CI on a schedule — not per pull request, where it is pure cost — catches
+drift before someone else notices it.
+
+## Use it to make decisions
+
+Calibration is also how you settle arguments that are otherwise vibes:
+
+- **"Can we drop to one ensemble run?"** Run `calibrate --runs 1` and compare. You will usually find
+  agreement falls and the review zone effectively disappears, which is the consensus signal doing its
+  job.
+- **"Can we widen the auto-pass zone?"** Adjust `judge.zones`, re-run, and look at the false-positive
+  rate rather than the pass count.
+- **"Is this cheaper model good enough?"** `--provider` / `--model`, then compare. Sometimes the
+  answer is yes, and calibration is how you find out safely.
+
+## The artifact
+
+Keep the report. When someone asks why a model is allowed to fail the build, "88% agreement with our
+own reviewers on 40 human-verified cases, 6% false positives, re-measured on every model change" is
+an answer. Anything less is an opinion.

@@ -9,12 +9,12 @@ success_criteria: >
   Evals that could always have been code are now command evals with committed, reviewable scripts,
   and the next run costs measurably less with no loss of coverage.
 steps:
-  - { stage: "Find which llm evals could be code", doc: docs/src/content/docs/adopt/promote-to-deterministic.mdx, exists: false, note: "[GAP] docevals promote, and why the default is report-only" }
-  - { stage: "Convert them", doc: docs/src/content/docs/adopt/promote-to-deterministic.mdx, exists: false, note: "[GAP] promote --write" }
-  - { stage: "Generate a script for a plain-language command eval", doc: docs/src/content/docs/evals/deterministic-checks.mdx, exists: false, note: "[GAP] a command eval with an assertion and no command" }
-  - { stage: "Review the generated script like any other source", doc: docs/src/content/docs/adopt/review-generated-scripts.mdx, exists: false, note: "[GAP] scripts are version-controlled files, not frontmatter" }
-  - { stage: "Understand what invalidates a generated script", doc: docs/src/content/docs/reference/frontmatter.mdx, exists: false, note: "[GAP] generated.assertionHash" }
-  - { stage: "Confirm the saving", doc: docs/src/content/docs/ci/cost-and-caching.mdx, exists: false, note: "[GAP]" }
+  - { stage: "Find which llm evals could be code", doc: docs/src/content/docs/adopt/promote-to-deterministic.mdx, exists: true }
+  - { stage: "Convert them", doc: docs/src/content/docs/adopt/promote-to-deterministic.mdx, exists: true }
+  - { stage: "Generate a script for a plain-language command eval", doc: docs/src/content/docs/evals/deterministic-checks.mdx, exists: true }
+  - { stage: "Review the generated script like any other source", doc: docs/src/content/docs/adopt/review-generated-scripts.mdx, exists: true }
+  - { stage: "Understand what invalidates a generated script", doc: docs/src/content/docs/reference/frontmatter.mdx, exists: true }
+  - { stage: "Confirm the saving", doc: docs/src/content/docs/ci/cost-and-caching.mdx, exists: true }
 ---
 
 # CUJ: Move evals down the grader hierarchy
@@ -50,4 +50,4 @@ script is stale and regenerates rather than quietly checking the old thing. Read
 first as a confusing failure in [`cuj-fix-red-check`](cuj-fix-red-check.md); explaining it here, where
 it is created, is what makes that later encounter legible.
 
-**Current friction / gap.** Six steps, six gaps.
+**Status.** All 6 steps are served by written pages (5 distinct). Re-check this when the journey changes: a step whose `doc` no longer resolves, or a new step with no page behind it, is the signal that this journey has drifted ahead of the docs.

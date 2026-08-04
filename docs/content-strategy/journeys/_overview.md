@@ -84,15 +84,18 @@ Each step is `{ stage, doc, exists, note }`, where `doc` is a **repo-relative so
 
 | `exists` | Meaning | Count today |
 |---|---|---|
-| `true` | A real page serves this step | **0** — the site is greenfield |
-| `partial` | A section-index stub exists at that path, but not the content | the 8 scaffolded stubs |
-| `false` | The page does not exist and the journey needs it | everything else |
+| `true` | A real page serves this step | **82** — all of them |
+| `partial` | A file exists at that path but does not serve the step | 0 |
+| `false` | The page does not exist and the journey needs it | 0 |
 
-Every `partial` and `false` route appears in
-[`../information-architecture/ia-gap-analysis.md`](../information-architecture/ia-gap-analysis.md).
-That correspondence runs both ways and is the check that the backlog is complete: a route in a journey
-and not in the backlog means an unplanned page, and a page in the backlog serving no journey means
-content nobody asked for.
+The content set is written, so this table has changed job. It was a backlog; it is now a **drift
+detector**. Two failures it catches:
+
+- A step whose `doc` no longer resolves — a page was renamed or removed without updating the journey.
+- A step added to a journey with no page behind it — the strategy has run ahead of the docs.
+
+Both are caught by a file test over `steps[].doc`, which is why the field holds a repo-relative source
+path rather than a published URL.
 
 ## Concentration, and what it tells us
 

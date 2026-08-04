@@ -34,13 +34,16 @@ A CUJ step's `doc:` field holds a **repo-relative source path**, not a published
 
 | `exists` | Meaning |
 |---|---|
-| `true` | The route resolves to a real page that serves this step. **Currently none — the site is greenfield.** |
-| `partial` | A file exists at that path, but only as a section-index stub. Carries a `[GAP]` note. |
-| `false` | The page does not exist yet and the journey needs it. Carries a `[GAP]` note. |
+| `true` | The route resolves to a real page that serves this step. **All 82 steps are currently `true`.** |
+| `partial` | A file exists at that path but does not yet serve the step. Carries a `[GAP]` note. |
+| `false` | The page does not exist and the journey needs it. Carries a `[GAP]` note. |
 
-The published route is the path minus its `docs/src/content/docs/` prefix. Every `partial` and `false`
-route appears in `information-architecture/ia-gap-analysis.md` — that correspondence is the check that
-the backlog is complete.
+The published route is the path minus its `docs/src/content/docs/` prefix.
+
+The content set is written, so the check has inverted: it is no longer "is the backlog complete?" but
+**"has a journey drifted ahead of the docs?"** A step whose `doc` stops resolving, or a new step added
+without a page behind it, is the signal — and
+`information-architecture/ia-gap-analysis.md` records what is still outstanding.
 
 ## Evidence basis, and its limits
 

@@ -1,10 +1,12 @@
 ---
 id: ia-gap-analysis
 type: information-architecture
-scope: What the CUJ-driven IA requires that does not exist, and where today's content goes
+scope: What the CUJ-driven IA required, what shipped, and what is still outstanding
 companion: proposed-ia.md
 current_source: README.md
-new_pages: 34
+pages_planned: 34
+pages_written: 34
+status: content set complete
 ---
 
 # IA gap analysis
@@ -12,11 +14,20 @@ new_pages: 34
 **Scope:** the distance between [the proposed IA](proposed-ia.md) and what exists today. It does not
 restate the target structure — read that file first.
 
-The site is **greenfield**: `docs/src/content/docs/` contains eight section-index stubs and nothing
-else, created so the build resolves. The conventional "current page → proposed section" table would
-therefore be empty, so §1 maps the **README** instead — the only user-facing surface docevals has —
-and §2 carries the real deliverable: every page the journeys require, prioritized. **Enumerating the
-gaps is the point of this document, not an embarrassment in it.**
+**The content set is complete.** All 34 planned pages are written, all 82 CUJ steps resolve to a real
+page, and `docevals run` over the site passes 102/102 with no API key.
+
+This document therefore no longer enumerates a backlog. It keeps three jobs:
+
+1. **§1** records where each README section went, so the README can be slimmed without losing
+   content.
+2. **§2** is the delivery record — what was built and why — which is what a later reader needs when
+   deciding whether a page still earns its place.
+3. **§4** is the live check: every command, config key, and grader kind maps to a page. **Re-run it
+   whenever the CLI grows.** A new capability with no page is a gap the moment it ships, and this
+   table is where that becomes visible.
+
+The outstanding work is listed in [§5](#5-still-outstanding).
 
 ## 1. README decomposition map
 
@@ -45,10 +56,10 @@ it happens when the destination pages exist.
 **Stays in the README permanently:** the hook, badges, a five-line quickstart, install, and links into
 the site. Nothing else.
 
-## 2. `[NEW]` — content the CUJs require
+## 2. Delivery record — the content the CUJs require
 
-All 34 pages are new. `partial` means a section-index stub exists at that path with `title` and
-`description` frontmatter and no content.
+All 34 pages are written. Priorities below are the order they were built in and the order to restore
+them in if the site is ever rebuilt; `state` records what each was before this pass.
 
 ### P0 — launch (18)
 
@@ -184,3 +195,26 @@ Eval fields — `assertion`, `type`, `grader`, `evidence`, `examples`, `command`
 **No unmapped surface.** Re-run this check whenever a command, config key, or grader is added — a new
 capability with no page is a documentation gap the moment it ships, and this table is where that
 becomes visible.
+
+## 5. Still outstanding
+
+The content set is complete; these are not.
+
+| Item | Why it is not done | Blocking? |
+|---|---|---|
+| **GitHub Pages deployment** | The site builds and is verified in CI, but nothing publishes it. Deliberately separate — `docs.yml` in the sibling docmeta repo is the model. | Nothing ships to readers until this lands. |
+| **LLM evals on the docs corpus** | The `docs-page` suite is deterministic-only. `docs-page-full` adds `no-future-promises`, `serves-one-journey`, and `readable`, and needs committed cache fixtures generated with a provider (`npm run docs:refresh-cache`). | No — but the prose quality of these pages is currently ungated. |
+| **Slimming the README** | Now unblocked: §1 maps every section to a destination that exists. | No. |
+| **`docevals list --format` validation** | An unknown `--format` on `list` exits 0 rather than erroring. Documented behavior is correct today; the inconsistency with `run` is a code question. | No. |
+
+### What will drift first
+
+Ranked by likelihood, for whoever picks this up next:
+
+1. **Reference pages against a changing CLI.** `reference/cli.mdx`, `configuration.mdx`, and
+   `graders.mdx` restate the source. The inline Doc Detective steps catch changed *behavior*; they do
+   not catch a new flag that nobody documented. §4 is the guard — run it.
+2. **Captured output samples.** `output-and-exit-codes.mdx` embeds real run output. A reporter change
+   makes those stale silently, since no step asserts against the pretty-printed form.
+3. **Cross-links.** 34 pages link to each other heavily. A rename breaks them and nothing currently
+   checks internal links on the built site.

@@ -9,13 +9,13 @@ success_criteria: >
   A fork pull request cannot execute its author's code on a runner and cannot reach a provider
   credential, and no run can exceed a spend ceiling set in config.
 steps:
-  - { stage: "Know what a content file can cause to execute", doc: docs/src/content/docs/ci/untrusted-pull-requests.mdx, exists: false, note: "[GAP] two paths: frontmatter commands, and doc-detective steps in page bodies" }
-  - { stage: "Gate frontmatter-declared commands", doc: docs/src/content/docs/ci/untrusted-pull-requests.mdx, exists: false, note: "[GAP] scripts.allowFrontmatterCommands and --no-frontmatter-commands" }
-  - { stage: "Understand what that flag does not cover", doc: docs/src/content/docs/ci/untrusted-pull-requests.mdx, exists: false, note: "[GAP] tool:doc-detective executes body steps regardless; the job itself must be fork-gated" }
-  - { stage: "Run the fork path without a credential", doc: docs/src/content/docs/ci/untrusted-pull-requests.mdx, exists: false, note: "[GAP] --deterministic-only as the fork job" }
-  - { stage: "Set a hard spend ceiling", doc: docs/src/content/docs/ci/cost-and-caching.mdx, exists: false, note: "[GAP] judge.maxCostUsd, fill.maxCostUsd, --max-cost" }
-  - { stage: "Make repeat runs nearly free", doc: docs/src/content/docs/ci/cost-and-caching.mdx, exists: false, note: "[GAP] content-addressed caching; what invalidates an entry" }
-  - { stage: "Look up the flags and config keys", doc: docs/src/content/docs/reference/configuration.mdx, exists: false, note: "[GAP]" }
+  - { stage: "Know what a content file can cause to execute", doc: docs/src/content/docs/ci/untrusted-pull-requests.mdx, exists: true }
+  - { stage: "Gate frontmatter-declared commands", doc: docs/src/content/docs/ci/untrusted-pull-requests.mdx, exists: true }
+  - { stage: "Understand what that flag does not cover", doc: docs/src/content/docs/ci/untrusted-pull-requests.mdx, exists: true }
+  - { stage: "Run the fork path without a credential", doc: docs/src/content/docs/ci/untrusted-pull-requests.mdx, exists: true }
+  - { stage: "Set a hard spend ceiling", doc: docs/src/content/docs/ci/cost-and-caching.mdx, exists: true }
+  - { stage: "Make repeat runs nearly free", doc: docs/src/content/docs/ci/cost-and-caching.mdx, exists: true }
+  - { stage: "Look up the flags and config keys", doc: docs/src/content/docs/reference/configuration.mdx, exists: true }
 ---
 
 # CUJ: Bound what the gate can spend and what it can execute
@@ -55,5 +55,4 @@ abort**, not warnings; and caching is content-addressed, so an unchanged page an
 assertion never re-judge. Together they make the steady-state cost of a docs PR approximately zero,
 which is the number Devin needs and the one that is least obvious from the outside.
 
-**Current friction / gap.** Seven steps, seven gaps. Four land on `ci/untrusted-pull-requests.mdx`,
-which is the single highest-consequence page in the content set.
+**Status.** All 7 steps are served by written pages (3 distinct). Re-check this when the journey changes: a step whose `doc` no longer resolves, or a new step with no page behind it, is the signal that this journey has drifted ahead of the docs.

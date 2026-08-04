@@ -9,13 +9,13 @@ success_criteria: >
   An assertion that two humans reading the same page agree on, that the judge agrees with, and whose
   failure tells the author which sentence to change.
 steps:
-  - { stage: "See why an assertion is unjudgeable", doc: docs/src/content/docs/evals/write-good-assertions.mdx, exists: false, note: "[GAP] the single highest-leverage page for this persona" }
-  - { stage: "Scope what the judge looks at", doc: docs/src/content/docs/evals/write-good-assertions.mdx, exists: false, note: "[GAP] the evidence field" }
-  - { stage: "Pin the boundary with a passing and a failing example", doc: docs/src/content/docs/evals/write-good-assertions.mdx, exists: false, note: "[GAP] examples.pass and examples.fail" }
-  - { stage: "Decide whether it guards behavior or measures reach", doc: docs/src/content/docs/evals/regression-vs-capability.mdx, exists: false, note: "[GAP] regression is the default and usually right" }
-  - { stage: "Ask whether it should be an llm eval at all", doc: docs/src/content/docs/evals/deterministic-checks.mdx, exists: false, note: "[GAP] if it can be code, it should be" }
-  - { stage: "Check the wording against how it is judged", doc: docs/src/content/docs/judge/index.mdx, exists: partial, note: "[GAP] section-index stub only; ensemble, consensus, zones" }
-  - { stage: "Look up every field an eval can carry", doc: docs/src/content/docs/reference/frontmatter.mdx, exists: false, note: "[GAP]" }
+  - { stage: "See why an assertion is unjudgeable", doc: docs/src/content/docs/evals/write-good-assertions.mdx, exists: true }
+  - { stage: "Scope what the judge looks at", doc: docs/src/content/docs/evals/write-good-assertions.mdx, exists: true }
+  - { stage: "Pin the boundary with a passing and a failing example", doc: docs/src/content/docs/evals/write-good-assertions.mdx, exists: true }
+  - { stage: "Decide whether it guards behavior or measures reach", doc: docs/src/content/docs/evals/regression-vs-capability.mdx, exists: true }
+  - { stage: "Ask whether it should be an llm eval at all", doc: docs/src/content/docs/evals/deterministic-checks.mdx, exists: true }
+  - { stage: "Check the wording against how it is judged", doc: docs/src/content/docs/judge/index.mdx, exists: true }
+  - { stage: "Look up every field an eval can carry", doc: docs/src/content/docs/reference/frontmatter.mdx, exists: true }
 ---
 
 # CUJ: Write assertions the judge can actually decide
@@ -57,5 +57,4 @@ The reader should also understand, at least in outline, **how their words get ju
 consensus where `partial` counts as fail, and the confidence zones — because those mechanics explain
 why a marginal assertion produces human-review verdicts rather than random ones.
 
-**Current friction / gap.** Seven steps, seven gaps. `evals/write-good-assertions.mdx` carries three
-of them and is the highest-leverage page on the site for this persona.
+**Status.** All 7 steps are served by written pages (5 distinct). Re-check this when the journey changes: a step whose `doc` no longer resolves, or a new step with no page behind it, is the signal that this journey has drifted ahead of the docs.

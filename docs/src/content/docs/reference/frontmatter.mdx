@@ -1,0 +1,142 @@
+---
+title: Frontmatter reference
+description: Every field an eval can carry, and how page evals resolve against config evals and suites.
+---
+
+All eval declarations live under the `evals` key in page frontmatter, validated by the JSON Schema
+this package publishes at `schemas/frontmatter-0.1.json`. Verified against that schema and
+`src/core/resolve.ts`.
+
+## The `evals` key
+
+Takes either an **array** (just the evals) or an **object** (when you need `suite` or `skip`).
+
+```yaml
+---
+title: Installation
+evals:
+  - no-future-promises
+  - name: install-command-present
+    assertion: The page contains a bash code block with `npm i -g doc-detective`.
+    grader: command
+---
+```
+
+```yaml
+---
+title: Concepts
+evals:
+  suite: how-to
+  skip: false
+  evals:
+    - no-future-promises
+---
+```
+
+| Object key | Type | Meaning |
+|---|---|---|
+| `suite` | string | Named suite from the config whose evals apply. Unknown suite names are a page error. |
+| `skip` | boolean | Skip this page entirely; it reports as skipped. |
+| `evals` | array | The entries below. |
+| `generatedBy` | string | Recorded when tooling wrote the block. |
+
+## Entry forms
+
+An entry in the `evals` array takes one of three forms.
+
+**A bare string** references a named eval from the config:
+
+```yaml
+evals:
+  - no-future-promises
+```
+
+**A reference with overrides** narrows a named eval for this page only:
+
+```yaml
+evals:
+  - use: fresh-enough
+    severity: warning
+    options: { maxAgeDays: 180 }
+```
+
+| Override | Effect |
+|---|---|
+| `type` | Replaces the eval's type. |
+| `severity` | Replaces the severity. |
+| `options` | **Merged** over the base options, not replaced. |
+| `skip` | Skips this one eval on this page. |
+
+**An inline definition** declares an eval that exists only on this page. It requires a `name`, and
+takes every field below.
+
+## Eval fields
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `assertion` | string | — | Required when `grader` is set. The claim about the page that is true or false. |
+| `type` | `regression` \| `capability` | `regression` | Most evals guard behavior that must keep working. |
+| `grader` | string | `llm` | `llm`, `command`, `human`, or `tool:<name>`. |
+| `evidence` | string | — | Scopes what the judge looks at. |
+| `examples.pass` / `examples.fail` | string | — | Pins the boundary. An inline llm eval without them raises a warning. |
+| `command` | string[] | — | For `command` graders. `{file}` expands to the page's absolute path. |
+| `successExitCodes` | integer[] | `[0]` | Exit codes treated as a pass. |
+| `timeoutMs` | integer ≥ 1 | grader-specific | |
+| `generated.assertionHash` | string | — | Written by script generation; a mismatch means the script is stale. |
+| `options` | object | `{}` | Grader-specific. See [Graders](/docevals/reference/graders/). |
+| `severity` | `error` \| `warning` \| `info` | `error` | Only `error` findings fail the build. |
+| `severityMap` | object | — | Maps a tool's own severities onto docevals severities. |
+
+## Resolution order
+
+For each page, the plan is built in this order:
+
+1. **Suite evals** from the config — the page's `suite`, or `defaults.suite`.
+2. **Page entries**, in document order. A reference merges onto the suite's version of that eval; an
+   inline definition replaces it.
+
+**Page entries win on name collision.** Local override beats global default, which is the right
+behavior and invisible until it bites — so check the resolved plan with `docevals list` rather than
+by running.
+
+Every resolved eval records its `source` as `config` or `page`, which `list` prints.
+
+## Page problems
+
+These are reported per page rather than thrown, so one bad page does not stop the run:
+
+| Problem | Level |
+|---|---|
+| Frontmatter fails schema validation | error |
+| Unknown suite name | error |
+| Unknown eval reference | error |
+| Duplicate eval name on one page | warning |
+| Inline llm eval with no `examples` | warning |
+
+Errors carry the source line, resolved through docmeta's JSON-Pointer line map.
+
+## Validating the frontmatter itself
+
+The schema ships in the package, so any JSON Schema validator can check your pages:
+
+```bash
+docmeta validate --schema node_modules/@hawkeyexl/docevals/schemas/frontmatter-0.1.json docs/
+```
+
+Or wire it in as an eval, so bad declarations fail the run like any other check:
+
+```yaml
+evals:
+  frontmatter-valid:
+    assertion: Page frontmatter matches the docevals schema.
+    grader: tool:docmeta
+    options:
+      schemas: ["node_modules/@hawkeyexl/docevals/schemas/frontmatter-0.1.json"]
+    severity: error
+```
+
+Programmatic consumers can import the schema object or its resolved path:
+
+```js
+import { frontmatterSchema, frontmatterSchemaPath } from "docevals";
+```

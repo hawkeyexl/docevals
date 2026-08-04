@@ -9,13 +9,13 @@ success_criteria: >
   Vale, markdownlint, docmeta, and a structure linter all report through one docevals run, as evals
   with names and severities, in one output format — and the separate CI steps are gone.
 steps:
-  - { stage: "See the grader hierarchy and why code comes first", doc: docs/src/content/docs/get-started/how-docevals-works.mdx, exists: false, note: "[GAP]" }
-  - { stage: "Wrap an existing linter as a tool eval", doc: docs/src/content/docs/evals/deterministic-checks.mdx, exists: false, note: "[GAP] tool:vale, tool:markdownlint, tool:docmeta, tool:doc-structure-lint" }
-  - { stage: "Look up each grader's options", doc: docs/src/content/docs/reference/graders.mdx, exists: false, note: "[GAP] every kind in src/graders/registry.ts with its options table" }
-  - { stage: "Add the native checks nothing else covers", doc: docs/src/content/docs/reference/graders.mdx, exists: false, note: "[GAP] tool:freshness, tool:reading-level, tool:differentiation" }
-  - { stage: "Run an arbitrary CLI check as a command eval", doc: docs/src/content/docs/evals/deterministic-checks.mdx, exists: false, note: "[GAP]" }
-  - { stage: "Decide what fails the build and what only reports", doc: docs/src/content/docs/evals/severity-and-findings.mdx, exists: false, note: "[GAP] error fails; warning and info report and pass" }
-  - { stage: "Test the commands the docs themselves present", doc: docs/src/content/docs/evals/test-your-commands.mdx, exists: false, note: "[GAP] tool:doc-detective plus inline steps" }
+  - { stage: "See the grader hierarchy and why code comes first", doc: docs/src/content/docs/get-started/how-docevals-works.mdx, exists: true }
+  - { stage: "Wrap an existing linter as a tool eval", doc: docs/src/content/docs/evals/deterministic-checks.mdx, exists: true }
+  - { stage: "Look up each grader's options", doc: docs/src/content/docs/reference/graders.mdx, exists: true }
+  - { stage: "Add the native checks nothing else covers", doc: docs/src/content/docs/reference/graders.mdx, exists: true }
+  - { stage: "Run an arbitrary CLI check as a command eval", doc: docs/src/content/docs/evals/deterministic-checks.mdx, exists: true }
+  - { stage: "Decide what fails the build and what only reports", doc: docs/src/content/docs/evals/severity-and-findings.mdx, exists: true }
+  - { stage: "Test the commands the docs themselves present", doc: docs/src/content/docs/evals/test-your-commands.mdx, exists: true }
 ---
 
 # CUJ: Fold the linters you already run into one gate
@@ -48,6 +48,4 @@ graders** exist only where nothing else covers the gap, and saying which three a
 reasonable suspicion that docevals is quietly growing its own linter. And **`tool:doc-detective`**
 closes the loop: the docs' own commands become testable, which is how this site verifies itself.
 
-**Current friction / gap.** All seven steps are gaps. `reference/graders.mdx` carries two of them and
-is the densest reference page on the site — every kind in `src/graders/registry.ts`, each with its
-`options` table, verified against the grader source rather than assumed.
+**Status.** All 7 steps are served by written pages (5 distinct). Re-check this when the journey changes: a step whose `doc` no longer resolves, or a new step with no page behind it, is the signal that this journey has drifted ahead of the docs.

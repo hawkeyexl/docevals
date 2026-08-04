@@ -1,0 +1,125 @@
+---
+title: Exit codes and annotations
+description: What 0, 1, and 2 mean, who each routes to, and how failures land on the right line.
+---
+
+Three exit codes, and the distinction between two of them is the difference between a check people
+trust and one they route around.
+
+## The contract
+
+| Code | Meaning | Whose problem |
+|---|---|---|
+| `0` | Everything passed | — |
+| `1` | Findings, errors, or a suite below its target pass rate | The page author |
+| `2` | Operational or usage error — bad config, missing provider, malformed flag | The pipeline owner |
+
+## Never collapse `1` and `2`
+
+A recipe like this is wrong:
+
+```yaml
+- run: npx docevals run || echo "docs check failed"
+```
+
+So is anything that reports every non-zero exit as "the docs are bad". When the provider key is
+missing or the config has a typo, exit `2` fires — and blaming the author for it is precisely how a
+check earns a reputation for flakiness it does not deserve. Two or three of those and someone removes
+the step.
+
+Route them separately:
+
+```yaml
+      - name: docevals
+        id: docevals
+        continue-on-error: true
+        run: npx docevals run --format github
+
+      - name: Fail the PR on findings
+        if: steps.docevals.outcome == 'failure'
+        run: |
+          code=${{ steps.docevals.outputs.exit-code || '1' }}
+          if [ "$code" = "2" ]; then
+            echo "::error::docevals could not run — this is a pipeline problem, not a docs problem."
+          fi
+          exit 1
+```
+
+Simplest correct version: let the step fail naturally, and make sure whoever triages CI knows `2`
+means "look at the config, not the page".
+
+## `--fail-on-review`
+
+By default, evals in the human-review zone do not fail the build. With `--fail-on-review`, they exit
+`1`.
+
+This is a genuine policy fork, not a best practice:
+
+| | Blocks on review | Doesn't block |
+|---|---|---|
+| The queue | Never ignored | Can rot |
+| Pull requests | Sometimes wait on a person | Keep moving |
+| Needs | Someone who owns the queue | — |
+
+The deciding question is whether anyone owns the review queue. If nobody does, blocking on it just
+converts a rotting queue into blocked contributors. See
+[Human review](/docevals/judge/human-review/).
+
+## Inline annotations
+
+`--format github` emits workflow commands before the markdown summary, so one invocation both
+annotates the diff and produces a job summary.
+
+```text
+::error file=docs/actions/goTo.mdx,line=4,title=docevals%3A fresh-enough::Page last reviewed 937 days ago (max 365)
+```
+
+Severity maps to the annotation level:
+
+| Finding severity | Annotation |
+|---|---|
+| `error` | `::error` |
+| `warning` | `::warning` |
+| `info` | `::notice` |
+
+Values are escaped per GitHub's rules — `%`, CR and LF in data; additionally `:` and `,` in
+properties, which is why the title renders as `docevals%3A fresh-enough`.
+
+### Judged failures annotate the file
+
+An llm eval has no line to point at, so it annotates the file with the mean confidence and the
+judge's reasoning:
+
+```text
+::error file=docs/tutorial.mdx,title=docevals%3A no-future-promises::LLM judge: fail (confidence 0.93). <reasoning>
+```
+
+That reasoning is what a contributor acts on. It is only as good as the assertion behind it — see
+[Write good assertions](/docevals/evals/write-good-assertions/).
+
+## Suites below target fail the run
+
+```console
+Suites
+  reference: 2/3 passed — 67% vs target 100% below target (1 skipped)
+```
+
+Exit `1`, even if no individual eval errored. A capability suite left at the default target of `1.0`
+is the most common cause of a surprising red build — see
+[Regression vs capability](/docevals/evals/regression-vs-capability/).
+
+## Job summary
+
+```yaml
+      - run: npx docevals run --format github | tee "$GITHUB_STEP_SUMMARY"
+```
+
+{/* Verified by docevals itself during `verify-docs`. Config: .doc-detective.json. */}
+
+{/* step {"description":"Exit 0: every eval passes.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/find.mdx --deterministic-only --no-generate","exitCodes":[0]}} */}
+
+{/* step {"description":"Exit 1: a finding, or a suite below its target.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate","exitCodes":[1],"stdout":"below target"}} */}
+
+{/* step {"description":"Exit 2: an operational error, distinct from a finding.","runShell":{"command":"npx docevals run -c does-not-exist.yaml","exitCodes":[2]}} */}
+
+{/* step {"description":"github format emits an ::error with file and line for a finding with a known line.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate --format github","exitCodes":[1],"stdout":"/::error file=.*,line=4,/"}} */}

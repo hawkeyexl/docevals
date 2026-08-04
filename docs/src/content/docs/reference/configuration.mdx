@@ -1,0 +1,135 @@
+---
+title: Configuration reference
+description: Every docevals.config.yaml key, its type, and its default.
+---
+
+Every key, verified against `src/core/config-schema.json` and the defaults applied in
+`src/core/config.ts`. Unknown keys are rejected — the schema sets `additionalProperties: false` at
+every level, so a typo is a startup error rather than a silently ignored setting.
+
+With no config file present, every default below applies and there are no named evals or suites.
+
+## `version`
+
+Required. Must be `1`.
+
+## `files`
+
+| Key | Type | Default |
+|---|---|---|
+| `files.include` | string[] | `["**/*.{md,mdx}"]` |
+| `files.exclude` | string[] | `["**/node_modules/**"]` |
+
+Positional globs on the CLI override `files.include` for that run.
+
+## `defaults`
+
+| Key | Type | Default | Notes |
+|---|---|---|---|
+| `defaults.suite` | string \| null | `null` | Suite applied to pages that name none. Must be a defined suite or startup fails. |
+| `defaults.failFast` | boolean | `false` | |
+| `defaults.concurrency` | integer ≥ 1 | `4` | Bounded concurrency across targets. |
+
+## `provider`
+
+| Key | Type | Default |
+|---|---|---|
+| `provider.default` | `anthropic` \| `openai` \| `claude-cli` | `anthropic` |
+| `provider.anthropic.model` | string | `claude-sonnet-4-5` |
+| `provider.anthropic.apiKeyEnv` | string | `ANTHROPIC_API_KEY` |
+| `provider.openai.baseUrl` | string | `https://api.openai.com/v1` |
+| `provider.openai.model` | string | `gpt-4o-mini` |
+| `provider.openai.apiKeyEnv` | string | `OPENAI_API_KEY` |
+| `provider.claude-cli.model` | string | `claude-sonnet-4-5` |
+| `provider.claude-cli.command` | string | `claude` |
+
+`provider.anthropic.pricing` and `provider.openai.pricing` each take `inputPerMTok` and
+`outputPerMTok` numbers, overriding the built-in price table for cost reporting. See
+[Choose a provider](/docevals/judge/choose-a-provider/).
+
+## `judge`
+
+| Key | Type | Default | Notes |
+|---|---|---|---|
+| `judge.ensembleRuns` | integer ≥ 1 | `3` | Independent runs aggregated by consensus. |
+| `judge.temperature` | number ≥ 0 | `0` | |
+| `judge.zones.autoPass` | number 0–1 | `0.8` | Confidence at or above which a passing consensus auto-passes. |
+| `judge.zones.autoFail` | number 0–1 | `0.8` | Confidence at or above which a failing consensus auto-fails. |
+| `judge.falsePositiveAlert` | number 0–1 | `0.15` | Calibration alerts above this false-positive rate. |
+| `judge.cacheDir` | string | `.docevals/cache` | |
+| `judge.maxCostUsd` | number \| null | `null` | Hard ceiling that aborts, not a warning. |
+
+Anything between the two zone thresholds lands in human review. See
+[How judging works](/docevals/judge/).
+
+## `scripts`
+
+| Key | Type | Default | Notes |
+|---|---|---|---|
+| `scripts.dir` | string | `{docDir}/docevals` | Where generated scripts go. `{docDir}` expands to the page's directory. |
+| `scripts.configDir` | string | `docevals-scripts` | Used when `scripts.dir` has no `{docDir}`; resolved relative to the config file. |
+| `scripts.allowFrontmatterCommands` | boolean | `true` | Gates `command` evals declared in page frontmatter. |
+| `scripts.timeoutMs` | integer ≥ 1 | `30000` | |
+
+:::caution
+`scripts.allowFrontmatterCommands` gates **frontmatter-declared commands only**. The
+`tool:doc-detective` grader executes steps embedded in page bodies and is not covered by it. See
+[Untrusted pull requests](/docevals/ci/untrusted-pull-requests/).
+:::
+
+## `fill`
+
+| Key | Type | Default |
+|---|---|---|
+| `fill.confidenceThreshold` | number 0–1 | `0.7` |
+| `fill.maxEvalsPerPage` | integer ≥ 1 | `3` |
+| `fill.temperature` | number ≥ 0 | `0` |
+| `fill.cacheDir` | string | `.docevals/cache/fill` |
+| `fill.maxCostUsd` | number \| null | `null` |
+
+## `evals`
+
+A map of eval name to definition. Names match `^[a-z0-9][a-z0-9-]*$`.
+
+Every field an eval can carry is documented in
+[Frontmatter reference](/docevals/reference/frontmatter/) — the same shape applies whether the eval
+is defined here or inline on a page.
+
+```yaml
+evals:
+  no-future-promises:
+    type: regression
+    assertion: The page makes no claims about unreleased or future functionality.
+    grader: llm
+    evidence: All prose sections
+    examples:
+      pass: Describes only shipped behavior.
+      fail: Says "coming soon" or references an unreleased version.
+```
+
+## `suites`
+
+A map of suite name to definition.
+
+| Key | Type | Default |
+|---|---|---|
+| `targetPassRate` | number 0–1 | `1.0` |
+| `evals` | string[] | `[]` |
+
+```yaml
+suites:
+  reference:
+    targetPassRate: 1.0
+    evals: [no-future-promises, fresh-enough, readable, frontmatter-valid]
+  tutorial:
+    targetPassRate: 0.7
+    evals: [explains-why-before-how, no-future-promises]
+```
+
+## Referential integrity
+
+Two checks run at load time and fail the process with exit 2 rather than surfacing later as a
+confusing per-page problem:
+
+- A suite may only reference evals defined under `evals`.
+- `defaults.suite` must name a defined suite.

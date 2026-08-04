@@ -1,0 +1,122 @@
+---
+title: Choose a provider
+description: Three ways to reach a judge — including one that needs no API key and one that stays on your own infrastructure.
+---
+
+Three providers. The differences that matter are where your page content goes and what credential CI
+needs.
+
+| Provider | Credential | Content goes to |
+|---|---|---|
+| `anthropic` | `ANTHROPIC_API_KEY` | Anthropic's API |
+| `openai` | `OPENAI_API_KEY` | Whatever `baseUrl` points at — including your own server |
+| `claude-cli` | None — uses local CLI auth | Anthropic, via the local `claude` CLI |
+
+## `anthropic` (default)
+
+```yaml
+provider:
+  default: anthropic
+  anthropic:
+    model: claude-sonnet-4-5
+    apiKeyEnv: ANTHROPIC_API_KEY
+```
+
+Structured output via forced tool use, so verdicts arrive as validated JSON rather than prose to
+parse.
+
+## `openai` — and anything that speaks its API
+
+The `baseUrl` is the interesting field. It points at any OpenAI-compatible server: Ollama, vLLM,
+Azure, Groq, LM Studio, or an internal gateway.
+
+```yaml
+provider:
+  default: openai
+  openai:
+    baseUrl: http://localhost:11434/v1   # Ollama
+    model: llama3.1:8b
+    apiKeyEnv: OPENAI_API_KEY
+```
+
+```yaml
+    baseUrl: https://llm-gateway.internal.example.com/v1
+```
+
+Uses strict `json_schema` structured output where the endpoint supports it, falling back to
+`json_object` automatically where it does not — so smaller local models still work.
+
+**This is the answer to a security review.** If page content cannot leave your infrastructure, point
+`baseUrl` at a model that runs inside it. Nothing else about docevals changes.
+
+## `claude-cli` — no API key
+
+```yaml
+provider:
+  default: claude-cli
+  claude-cli:
+    model: claude-sonnet-4-5
+    command: claude
+```
+
+Shells out to the local `claude` CLI and uses its existing auth. Useful when:
+
+- You are evaluating docevals and do not want to provision a key.
+- Developers have CLI access but the team has no shared API key.
+- You would rather not put a long-lived key in CI.
+
+It depends on the CLI being installed and authenticated on the machine, which makes it better for
+local work than for a fresh CI runner.
+
+## Pin the model. Always.
+
+```yaml
+    model: claude-sonnet-4-5     # not an alias that floats
+```
+
+A floating alias means your verdicts change when the alias moves — silently, with no commit to point
+at. That is the one thing guaranteed to destroy trust in the gate.
+
+When you do change models deliberately: it invalidates every cached verdict (the model is part of the
+cache key), and it invalidates your calibration. [Re-calibrate](/docevals/judge/calibrate/) before
+trusting the new one.
+
+## Cost reporting for non-default models
+
+docevals ships a price table for common models. For a self-hosted or unusual model, supply pricing so
+cost reporting stays meaningful:
+
+```yaml
+provider:
+  openai:
+    baseUrl: https://llm-gateway.internal.example.com/v1
+    model: internal-model-v2
+    pricing:
+      inputPerMTok: 0.5
+      outputPerMTok: 1.5
+```
+
+Set both to `0` for a self-hosted model with no marginal cost — that keeps `--max-cost` from
+misfiring on a model that is free to run.
+
+## Overriding per run
+
+```bash
+npx docevals run --provider claude-cli
+npx docevals run --provider openai --model llama3.1:8b
+```
+
+Handy for comparing a cheaper model against your golden set before committing to it:
+
+```bash
+npx docevals calibrate --provider openai --model llama3.1:8b
+```
+
+## No provider at all
+
+`--deterministic-only` skips the judge entirely. Freshness, lint, structure, frontmatter validation,
+and generated checks all still run.
+
+This is the right configuration for fork pull requests, pre-commit hooks, and anyone evaluating
+docevals before deciding about model access — see
+[Untrusted pull requests](/docevals/ci/untrusted-pull-requests/).

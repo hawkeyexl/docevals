@@ -1,18 +1,109 @@
 ---
 title: Run it in CI
-description: Wire the eval gate into your pipeline, route on its exit codes, and bound what it can spend and execute.
+description: Add the eval gate to GitHub Actions, with inline annotations and a bounded cost.
 ---
 
-Installing and operating the gate: recipes per CI platform, the exit-code contract, inline pull
-request annotations, cost ceilings, and the fork-safety rules.
+A gate that is not in CI is a linter someone runs sometimes. This page is the GitHub Actions recipe;
+[other platforms](/docevals/ci/recipes/) follow the same shape.
 
-This section is planned and not yet written. It will cover:
+## The recipe
 
-- A GitHub Actions recipe, plus GitLab CI, Jenkins, and pre-commit
-- Exit codes `0`, `1`, and `2` — and why `1` and `2` route to different people
-- `--format github` for inline pull request annotations
-- Cost ceilings and cache persistence between runs
-- Untrusted pull requests: what a content file can cause to execute, and why gating the job is the
-  only complete answer
+```yaml
+name: docs
 
-Until then, the [README](https://github.com/hawkeyexl/docevals#readme) lists the flags and exit codes.
+on:
+  pull_request:
+    paths: ["docs/**", "docevals.config.yaml"]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  docevals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      # Persist the judge cache between runs — without it every push
+      # re-judges the whole corpus and the bill is the story.
+      - uses: actions/cache@v4
+        with:
+          path: .docevals/cache
+          key: docevals-${{ hashFiles('docevals.config.yaml') }}-${{ github.sha }}
+          restore-keys: docevals-${{ hashFiles('docevals.config.yaml') }}-
+
+      - run: npx docevals run --format github
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+Three things are doing real work here.
+
+**`--format github`** emits workflow commands that annotate the offending line in the diff, followed
+by a markdown summary. A failure a contributor can see on the line they wrote gets fixed in minutes;
+the same failure in a job log gets ignored. See
+[Exit codes and annotations](/docevals/ci/exit-codes-and-annotations/).
+
+**The cache step** is not an optimisation. The cost model assumes unchanged pages never re-judge; a
+cold cache every run re-judges everything. The key includes the config hash because changing an
+assertion legitimately invalidates verdicts. See [Cost and caching](/docevals/ci/cost-and-caching/).
+
+**`paths:`** keeps the job off pull requests that cannot affect the docs.
+
+## Post the summary
+
+`--format github` output doubles as a job summary:
+
+```yaml
+      - run: npx docevals run --format github | tee "$GITHUB_STEP_SUMMARY"
+```
+
+## Before you enable it on pull requests
+
+Two things will bite, and both have their own page:
+
+- **Fork pull requests can execute their author's code**, and the obvious-looking config flag does
+  not prevent it. Read [Untrusted pull requests](/docevals/ci/untrusted-pull-requests/) before this
+  job runs on a public repo.
+- **Spend is per-invocation.** Set `judge.maxCostUsd` or `--max-cost`; it aborts rather than warns.
+
+## Start deterministic
+
+You do not need a provider to get value on day one:
+
+```yaml
+      - run: npx docevals run --deterministic-only --format github
+```
+
+No secret, no cost, no model in the critical path — and freshness, structure, lint, and generated
+checks all still run. This is also the correct job for forks.
+
+## Exit codes route to different people
+
+| Code | Meaning | Whose problem |
+|---|---|---|
+| `0` | Pass | — |
+| `1` | Findings, or a suite below target | The author |
+| `2` | Operational — bad config, missing key | The pipeline owner |
+
+A recipe that treats any non-zero exit as "the docs are bad" blames authors for infrastructure
+problems and teaches the team the check is flaky. Do not collapse `1` and `2`.
+
+## Verify the gate can fail
+
+Before you trust it, make it fail once: break a page deliberately, confirm the job goes red with an
+annotation on the right line, and revert. A gate that has only ever been seen passing has not been
+shown to work.
+
+{/* Verified by docevals itself during `verify-docs`. Config: .doc-detective.json. */}
+
+{/* step {"description":"A clean run exits 0 so the job stays green.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/find.mdx --deterministic-only --no-generate --format github","exitCodes":[0]}} */}
+
+{/* step {"description":"A failure exits 1 and emits an ::error workflow command pinned to file and line.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate --format github","exitCodes":[1],"stdout":"/::error file=.*line=/"}} */}

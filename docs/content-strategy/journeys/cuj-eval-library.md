@@ -9,12 +9,12 @@ success_criteria: >
   Page frontmatter names a suite and a few eval names; the assertions themselves live in
   docevals.config.yaml, and changing one changes every page that uses it.
 steps:
-  - { stage: "Move a repeated assertion into a named eval", doc: docs/src/content/docs/evals/named-evals-and-suites.mdx, exists: false, note: "[GAP] named evals, suites, targetPassRate" }
-  - { stage: "Group evals into a suite per page type", doc: docs/src/content/docs/evals/named-evals-and-suites.mdx, exists: false, note: "[GAP]" }
-  - { stage: "Understand what wins when a page and the config collide", doc: docs/src/content/docs/reference/frontmatter.mdx, exists: false, note: "[GAP] resolution order: page beats config on name collision" }
-  - { stage: "Decide regression versus capability per eval", doc: docs/src/content/docs/evals/regression-vs-capability.mdx, exists: false, note: "[GAP] and why the default is regression" }
-  - { stage: "Set a target pass rate the suite is measured against", doc: docs/src/content/docs/reference/configuration.mdx, exists: false, note: "[GAP]" }
-  - { stage: "Confirm the resolved plan per page before running", doc: docs/src/content/docs/reference/cli.mdx, exists: false, note: "[GAP] docevals list is the dry-run for this whole journey" }
+  - { stage: "Move a repeated assertion into a named eval", doc: docs/src/content/docs/evals/named-evals-and-suites.mdx, exists: true }
+  - { stage: "Group evals into a suite per page type", doc: docs/src/content/docs/evals/named-evals-and-suites.mdx, exists: true }
+  - { stage: "Understand what wins when a page and the config collide", doc: docs/src/content/docs/reference/frontmatter.mdx, exists: true }
+  - { stage: "Decide regression versus capability per eval", doc: docs/src/content/docs/evals/regression-vs-capability.mdx, exists: true }
+  - { stage: "Set a target pass rate the suite is measured against", doc: docs/src/content/docs/reference/configuration.mdx, exists: true }
+  - { stage: "Confirm the resolved plan per page before running", doc: docs/src/content/docs/reference/cli.mdx, exists: true }
 ---
 
 # CUJ: Build a shared eval and suite library
@@ -50,6 +50,4 @@ This journey is shared between [Priya](../personas/priya-corpus-owner.md), who o
 infrastructure, and [Sara](../personas/sara-standard-owner.md), who owns what goes in it. In a small
 org they are the same person; the pages must not require a handoff between them.
 
-**Current friction / gap.** All six steps are gaps. Two land on `reference/` pages that do not exist
-yet, which makes this journey a strong argument for building the reference shelf at launch rather than
-deferring it.
+**Status.** All 6 steps are served by written pages (5 distinct). Re-check this when the journey changes: a step whose `doc` no longer resolves, or a new step with no page behind it, is the signal that this journey has drifted ahead of the docs.

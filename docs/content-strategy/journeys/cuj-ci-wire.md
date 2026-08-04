@@ -9,13 +9,13 @@ success_criteria: >
   One parameterized job, identical across repos, that blocks a pull request on findings, annotates
   the offending lines inline, and routes operational failures somewhere other than the author.
 steps:
-  - { stage: "Add the job on the reader's platform", doc: docs/src/content/docs/ci/index.mdx, exists: partial, note: "[GAP] section-index stub only; needs the GitHub Actions recipe" }
-  - { stage: "Get the same recipe for the other platforms", doc: docs/src/content/docs/ci/recipes.mdx, exists: false, note: "[GAP] GitLab CI, Jenkins, pre-commit" }
-  - { stage: "Route on the exit code", doc: docs/src/content/docs/ci/exit-codes-and-annotations.mdx, exists: false, note: "[GAP] 0 pass, 1 findings, 2 operational" }
-  - { stage: "Annotate the offending lines in the pull request", doc: docs/src/content/docs/ci/exit-codes-and-annotations.mdx, exists: false, note: "[GAP] --format github" }
-  - { stage: "Supply the provider credential", doc: docs/src/content/docs/judge/choose-a-provider.mdx, exists: false, note: "[GAP] apiKeyEnv, and the claude-cli provider needing no key" }
-  - { stage: "Persist the response cache between runs", doc: docs/src/content/docs/ci/cost-and-caching.mdx, exists: false, note: "[GAP] cache location and what belongs in a CI cache key" }
-  - { stage: "Feed results into existing tooling", doc: docs/src/content/docs/ci/consume-results.mdx, exists: false, note: "[GAP] --format json and the TypeScript API" }
+  - { stage: "Add the job on the reader's platform", doc: docs/src/content/docs/ci/index.mdx, exists: true }
+  - { stage: "Get the same recipe for the other platforms", doc: docs/src/content/docs/ci/recipes.mdx, exists: true }
+  - { stage: "Route on the exit code", doc: docs/src/content/docs/ci/exit-codes-and-annotations.mdx, exists: true }
+  - { stage: "Annotate the offending lines in the pull request", doc: docs/src/content/docs/ci/exit-codes-and-annotations.mdx, exists: true }
+  - { stage: "Supply the provider credential", doc: docs/src/content/docs/judge/choose-a-provider.mdx, exists: true }
+  - { stage: "Persist the response cache between runs", doc: docs/src/content/docs/ci/cost-and-caching.mdx, exists: true }
+  - { stage: "Feed results into existing tooling", doc: docs/src/content/docs/ci/consume-results.mdx, exists: true }
 ---
 
 # CUJ: Wire the gate into CI
@@ -54,4 +54,4 @@ The credential step is where the fork problem first appears. It is *raised* here
 [`cuj-bound-cost-and-risk`](cuj-bound-cost-and-risk.md); this journey must hand off rather than
 half-answer it.
 
-**Current friction / gap.** Seven steps, seven gaps.
+**Status.** All 7 steps are served by written pages (6 distinct). Re-check this when the journey changes: a step whose `doc` no longer resolves, or a new step with no page behind it, is the signal that this journey has drifted ahead of the docs.

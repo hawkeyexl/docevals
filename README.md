@@ -2,162 +2,106 @@
 
 Deterministic and LLM-as-judge evals for documentation pages, driven by frontmatter.
 
-docevals operationalizes the **Docs as Evals** methodology: every quality check on a documentation page is an *eval* — a named, testable assertion with a *grader* that decides pass or fail. Graders follow the grader hierarchy:
+Every quality check on a documentation page is an **eval**: a named, testable assertion with a
+**grader** that decides pass or fail. Graders run in preference order — code first, an LLM judge
+second, a human last.
 
-1. **Code-based (preferred)** — `command` evals run any CLI check; `tool:*` evals orchestrate existing tools (docmeta, markdownlint, Vale, doc-structure-lint, Doc Detective) plus a few native checks no existing tool covers (freshness, reading level, cross-page differentiation). docevals doesn't reimplement linters; it hooks them.
-2. **LLM-as-judge** — for assertions that need interpretation. Judged with safeguards: temperature 0, pinned models, structured JSON verdicts, a 3-run ensemble, and confidence zones (auto-pass / auto-fail / human-review).
-3. **Human** — the human-review zone routes to people; verdicts persist in `.docevals/reviews.yaml` and self-invalidate when the page changes.
+## Quickstart
 
-Verdicts are **binary pass/fail**. Suite pass rates emerge from binary judgments — regression suites target ~100%, capability suites ~70%.
-
-## Install
+Requires Node.js 24+.
 
 ```bash
 npm i -D @hawkeyexl/docevals
 npx docevals init
+npx docevals run --deterministic-only
 ```
 
-Requires Node.js 24+.
+That last command needs no API key and costs nothing — it runs the deterministic graders only. On a
+corpus that has never been checked, it usually finds something.
 
-## Declare evals in frontmatter
-
-All eval fields live in page frontmatter under the `evals` key, validated by the JSON Schema this package publishes at [`schemas/frontmatter-0.1.json`](schemas/frontmatter-0.1.json). Pages can reference named evals from `docevals.config.yaml`, or inline their own. The key takes either an array (just the evals) or an object (when you need `suite` or `skip`):
+Declare an assertion in a page's frontmatter:
 
 ```yaml
 ---
 title: Installation
 last-reviewed: 2026-06-01
 evals:
-  suite: how-to                  # named suite from docevals.config.yaml
-  evals:
-    - no-future-promises         # reference a named eval
-    - name: install-command-accuracy
-      assertion: >
-        The documented install command is `npm i -g doc-detective` and the
-        stated Node.js minimum is 22 or later.
-      type: regression           # regression (default) | capability
-      grader: llm
-      evidence: Code blocks and prerequisites list
-      examples:
-        pass: Shows `npm i -g doc-detective` and Node.js v22+.
-        fail: Shows a deprecated command or an older Node minimum.
-    - name: install-command-present
-      assertion: The page contains a bash code block with `npm i -g doc-detective`.
-      grader: command            # no command? docevals generates a script for it
----
-```
-
-When a page needs no suite, the array shorthand keeps it minimal:
-
-```yaml
----
-title: Concepts
-evals:
   - no-future-promises
-  - name: defines-core-terms
-    assertion: The page defines every core concept it introduces.
+  - name: install-command-present
+    assertion: The page contains a bash code block with `npm i -g doc-detective`.
+    grader: command
 ---
 ```
-
-### Validating the frontmatter itself
-
-The schema ships with the package, so any JSON Schema validator can check your pages. With [docmeta](https://github.com/hawkeyexl/docmeta):
-
-```bash
-docmeta validate --schema node_modules/@hawkeyexl/docevals/schemas/frontmatter-0.1.json docs/
-```
-
-Or wire it into docevals as a deterministic eval, so bad eval declarations fail the run like any other check:
-
-```yaml
-evals:
-  frontmatter-valid:
-    assertion: Page frontmatter matches the docevals schema.
-    grader: tool:docmeta
-    options:
-      schemas: ["node_modules/@hawkeyexl/docevals/schemas/frontmatter-0.1.json"]
-    severity: error
-```
-
-Programmatic consumers can import the schema object or its resolved path:
-
-```js
-import { frontmatterSchema, frontmatterSchemaPath } from "docevals";
-```
-
-## Generated check scripts
-
-A `command`-graded eval with an assertion but no `command` is a plain-language deterministic check. `docevals run` (or `docevals generate`) has your configured LLM write a small Node script for it, saves it **parallel to the doc** (`{docDir}/docevals/page.eval-name.mjs`), and writes the command reference back into the frontmatter:
-
-```yaml
-    - name: install-command-present
-      assertion: The page contains a bash code block with `npm i -g doc-detective`.
-      grader: command
-      command: [ node, docevals/installation.install-command-present.mjs, "{file}" ]
-      generated:
-        assertionHash: aefaa89e…   # editing the assertion regenerates the script
-```
-
-Generated scripts are ordinary version-controlled source — review them in PRs, edit them by hand. After generation, the check is fully deterministic: no LLM in the loop.
-
-`docevals promote` goes the other way: it reviews your llm-graded evals, asks the LLM which are actually expressible as code ("if you can express the eval criterion as code, do it"), and with `--write` converts them.
-
-## Proposing evals with `fill`
-
-Bootstrapping a corpus by hand is slow. `docevals fill` asks your configured LLM to propose evals for each page from its content, each with a self-reported 0–1 confidence:
 
 ```console
-$ docevals fill --dry-run docs/tests/overview.mdx
-proposed docs/tests/overview.mdx  +3 evals (all-test-statuses-defined 0.90, test-hierarchy-explained 0.85, skip-conditions-enumerated 0.75) — dry run, not written
+$ npx docevals run docs/ --deterministic-only
+docs/actions/goTo.mdx
+  FAIL fresh-enough
+       error:4 [freshness/stale] Page last reviewed 937 days ago (max 365)
+  pass readable
+  pass frontmatter-valid
 
-Threshold: 0.7 · LLM cost: $0.0212
+Suites
+  reference: 2/3 passed — 67% vs target 100% below target (1 skipped)
 ```
 
-Only proposals at or above the threshold (default `0.7`, config `fill.confidenceThreshold` or `--confidence`) are appended to the page's frontmatter; the rest are reported. Existing evals are never modified — proposals whose names collide with the page's resolved plan (inline, referenced, or suite-expanded) are dropped as duplicates, and pages with `evals: {skip: true}` are skipped. Proposals are always llm-graded with explicit `examples`; use `promote`/`generate` to make them deterministic afterward.
+Exit `1`. A docs regression, caught the way a test catches a code one.
 
-`fill` writes by default; `--dry-run` reports only. Raw proposals are cached (`.docevals/cache/fill/`) before gating, so re-running with a different `--confidence` costs nothing, and `fill.maxCostUsd` / `--max-cost` caps spend.
+## Documentation
+
+Full docs are in [`docs/`](docs/src/content/docs/) and build with Astro + Starlight.
+
+| Section | Covers |
+|---|---|
+| [Get started](docs/src/content/docs/get-started/index.mdx) | Install, first assertion, first finding |
+| [How docevals works](docs/src/content/docs/get-started/how-docevals-works.mdx) | The eval, the grader hierarchy, how a verdict is reached |
+| [Write evals](docs/src/content/docs/evals/index.mdx) | The frontmatter contract, assertion craft, deterministic checks, suites |
+| [Adopt at scale](docs/src/content/docs/adopt/index.mdx) | `fill`, retrofitting a legacy corpus, `promote` |
+| [Run it in CI](docs/src/content/docs/ci/index.mdx) | Recipes, exit codes, cost, and fork safety |
+| [Trust the judge](docs/src/content/docs/judge/index.mdx) | Ensemble, confidence zones, calibration, providers |
+| [Fix a failing eval](docs/src/content/docs/fix/index.mdx) | For contributors whose PR just went red |
+| [Reference](docs/src/content/docs/reference/index.mdx) | CLI, config, frontmatter, graders, output, state |
+
+To run the site locally:
+
+```bash
+cd docs && npm install && npm run dev
+```
 
 ## Commands
 
 | Command | Purpose |
 |---|---|
 | `docevals run [globs]` | Run all evals: deterministic graders first, then the LLM judge |
-| `docevals list` | Dry-run: show each page's resolved eval plan |
+| `docevals list` | Dry run — show each page's resolved eval plan |
 | `docevals generate` | Generate scripts for command evals missing a command |
 | `docevals fill [--dry-run]` | Propose new frontmatter evals with an LLM, gated on confidence |
 | `docevals promote [--write]` | Convert llm evals that could be deterministic |
-| `docevals review <file> <eval> <pass\|fail>` | Record a human verdict for a needs-review eval |
+| `docevals review <file> <eval> <pass\|fail>` | Record a human verdict |
 | `docevals calibrate` | Score the judge against a human-verified golden set |
 | `docevals init` | Scaffold a starter config |
 
-Useful `run` flags: `--deterministic-only`, `--llm-only`, `--format human|json|markdown|github`, `--fail-on-review`, `--runs N`, `--no-cache`, `--no-generate`, `--no-frontmatter-commands` (for untrusted PRs), `--max-cost <usd>`, `--provider`, `--model`.
+Exit codes: `0` pass · `1` failures, errors, or a suite below target · `2` usage or operational
+error. Full flag reference in [the CLI docs](docs/src/content/docs/reference/cli.mdx).
 
-Exit codes: `0` all pass · `1` failures, errors, or a suite below its target pass rate · `2` usage/operational error.
+## The published schema
 
-## Judge providers
+docevals ships the frontmatter JSON Schema as a package artifact, so any validator can check your
+pages:
 
-- **anthropic** (default) — `ANTHROPIC_API_KEY`, structured output via forced tool use.
-- **openai** — any OpenAI-compatible endpoint (`baseUrl`), including Ollama, Azure, Groq; strict `json_schema` with automatic `json_object` fallback.
-- **claude-cli** — shells out to the `claude` CLI with local auth; no API key.
-
-Judge responses are cached by content (`.docevals/cache/`) — unchanged pages and assertions never re-judge. Cost is tracked per run; set `judge.maxCostUsd` for a hard budget.
-
-## Configuration
-
-`docevals.config.yaml` holds providers, judge settings, named evals, and suites. See [`docevals.config.yaml`](docevals.config.yaml) in this repo (which runs docevals against its own test fixtures) for a complete example.
-
-## Calibration
-
-Keep 20–50 human-verified cases in `.docevals/golden/*.yaml`:
-
-```yaml
-- file: docs/install.md
-  eval: no-future-promises
-  expected: pass
-  rationale: Mentions only shipped features.
+```bash
+docmeta validate --schema node_modules/@hawkeyexl/docevals/schemas/frontmatter-0.1.json docs/
 ```
 
-`docevals calibrate` reports judge/human agreement (below 70% it exits 1 — refine your assertions first, not the grader) and flags false-positive rates above `judge.falsePositiveAlert`.
+```js
+import { frontmatterSchema, frontmatterSchemaPath } from "docevals";
+```
+
+## Contributing
+
+See [CLAUDE.md](CLAUDE.md) for repo conventions — red/green TDD, Conventional Commits, and the ADR
+rule. Decisions live in [`adrs/`](adrs); the docs content strategy lives in
+[`docs/content-strategy/`](docs/content-strategy/).
 
 ## License
 

@@ -9,12 +9,12 @@ success_criteria: >
   The author identifies which check failed, makes the smallest correct change or escalates
   correctly, confirms locally, and pushes — in a few minutes, having read one page.
 steps:
-  - { stage: "Work out which kind of failure this is", doc: docs/src/content/docs/fix/index.mdx, exists: partial, note: "[GAP] section-index stub only; the triage map is the first screen" }
-  - { stage: "Fix a deterministic finding pinned to a line", doc: docs/src/content/docs/fix/index.mdx, exists: partial, note: "[GAP] section-index stub only" }
-  - { stage: "Act on a judge rationale with no line number", doc: docs/src/content/docs/fix/index.mdx, exists: partial, note: "[GAP] read the assertion and its examples.fail alongside the rationale" }
-  - { stage: "Recognize a failure that is not yours to fix", doc: docs/src/content/docs/fix/faq.mdx, exists: false, note: "[GAP] needs-review, stale assertionHash, exit 2" }
-  - { stage: "Reproduce it locally without a provider key", doc: docs/src/content/docs/fix/index.mdx, exists: partial, note: "[GAP] section-index stub only; --deterministic-only on one file" }
-  - { stage: "Answer the recurring questions", doc: docs/src/content/docs/fix/faq.mdx, exists: false, note: "[GAP]" }
+  - { stage: "Work out which kind of failure this is", doc: docs/src/content/docs/fix/index.mdx, exists: true }
+  - { stage: "Fix a deterministic finding pinned to a line", doc: docs/src/content/docs/fix/index.mdx, exists: true }
+  - { stage: "Act on a judge rationale with no line number", doc: docs/src/content/docs/fix/index.mdx, exists: true }
+  - { stage: "Recognize a failure that is not yours to fix", doc: docs/src/content/docs/fix/faq.mdx, exists: true }
+  - { stage: "Reproduce it locally without a provider key", doc: docs/src/content/docs/fix/index.mdx, exists: true }
+  - { stage: "Answer the recurring questions", doc: docs/src/content/docs/fix/faq.mdx, exists: true }
 ---
 
 # CUJ: Fix a failing eval fast
@@ -58,5 +58,4 @@ dependencies.** It must be reachable cold from an annotation link and fully usef
 read nothing else. Every term is defined inline or linked. Any change that gives that page a
 prerequisite is a defect.
 
-**Current friction / gap.** Six steps, six gaps — four of them concentrated on one page, which is
-correct: the whole journey should be one page plus an FAQ, not a section to navigate.
+**Status.** All 6 steps are served by written pages (2 distinct). Re-check this when the journey changes: a step whose `doc` no longer resolves, or a new step with no page behind it, is the signal that this journey has drifted ahead of the docs.

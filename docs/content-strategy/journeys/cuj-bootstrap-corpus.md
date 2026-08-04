@@ -9,13 +9,13 @@ success_criteria: >
   Every page in a directory carries evals nobody hand-wrote, the reader knows what the run cost
   before it ran, and they have reviewed what landed rather than assuming it is right.
 steps:
-  - { stage: "See what fill would propose, and what it would cost", doc: docs/src/content/docs/adopt/index.mdx, exists: partial, note: "[GAP] section-index stub only; needs --dry-run first" }
-  - { stage: "Understand the confidence gate", doc: docs/src/content/docs/adopt/index.mdx, exists: partial, note: "[GAP] threshold semantics; below-threshold proposals are reported, not written" }
-  - { stage: "Re-gate at a different threshold for free", doc: docs/src/content/docs/ci/cost-and-caching.mdx, exists: false, note: "[GAP] raw proposals are cached before gating" }
-  - { stage: "Cap the spend before writing anything", doc: docs/src/content/docs/reference/cli.mdx, exists: false, note: "[GAP] --max-cost and fill.maxCostUsd" }
-  - { stage: "Write the proposals into frontmatter", doc: docs/src/content/docs/adopt/index.mdx, exists: partial, note: "[GAP] what fill will and will not touch: existing evals are never modified" }
-  - { stage: "Review what landed", doc: docs/src/content/docs/evals/write-good-assertions.mdx, exists: false, note: "[GAP] proposals are llm-graded by construction; judge them as assertions" }
-  - { stage: "Make the good ones cheap", doc: docs/src/content/docs/adopt/promote-to-deterministic.mdx, exists: false, note: "[GAP] hands off to cuj-cheapen-evals" }
+  - { stage: "See what fill would propose, and what it would cost", doc: docs/src/content/docs/adopt/index.mdx, exists: true }
+  - { stage: "Understand the confidence gate", doc: docs/src/content/docs/adopt/index.mdx, exists: true }
+  - { stage: "Re-gate at a different threshold for free", doc: docs/src/content/docs/ci/cost-and-caching.mdx, exists: true }
+  - { stage: "Cap the spend before writing anything", doc: docs/src/content/docs/reference/cli.mdx, exists: true }
+  - { stage: "Write the proposals into frontmatter", doc: docs/src/content/docs/adopt/index.mdx, exists: true }
+  - { stage: "Review what landed", doc: docs/src/content/docs/evals/write-good-assertions.mdx, exists: true }
+  - { stage: "Make the good ones cheap", doc: docs/src/content/docs/adopt/promote-to-deterministic.mdx, exists: true }
 ---
 
 # CUJ: Propose evals for a whole corpus with fill
@@ -49,5 +49,4 @@ and name collisions against the page's resolved plan are dropped — all of whic
 and none of which makes its output automatically good. A page implying the corpus is now covered sets
 the reader up to be wrong later.
 
-**Current friction / gap.** Seven steps, seven gaps. Three land on `adopt/index.mdx`, which exists
-only as a section stub — that page carries the heaviest single load in this journey.
+**Status.** All 7 steps are served by written pages (5 distinct). Re-check this when the journey changes: a step whose `doc` no longer resolves, or a new step with no page behind it, is the signal that this journey has drifted ahead of the docs.

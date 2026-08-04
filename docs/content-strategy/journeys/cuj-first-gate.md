@@ -10,14 +10,14 @@ success_criteria: >
   A pull request in the reader's own repo goes red because a page stopped meeting a named,
   written-down assertion — and the author can see which one and why.
 steps:
-  - { stage: "Decide whether this fits", doc: docs/src/content/docs/index.mdx, exists: partial, note: "[GAP] section-index stub only; needs the router and a 60-second proof" }
-  - { stage: "Install and run one eval end to end", doc: docs/src/content/docs/get-started/index.mdx, exists: partial, note: "[GAP] section-index stub only; needs install, init, first assertion, first run" }
-  - { stage: "Understand eval, grader, verdict", doc: docs/src/content/docs/get-started/how-docevals-works.mdx, exists: false, note: "[GAP] the conceptual on-ramp everything else depends on" }
-  - { stage: "Declare evals in page frontmatter", doc: docs/src/content/docs/evals/index.mdx, exists: partial, note: "[GAP] section-index stub only; needs the frontmatter contract" }
-  - { stage: "Write an assertion the judge can decide", doc: docs/src/content/docs/evals/write-good-assertions.mdx, exists: false, note: "[GAP]" }
-  - { stage: "Add a deterministic check so not everything is judged", doc: docs/src/content/docs/evals/deterministic-checks.mdx, exists: false, note: "[GAP]" }
-  - { stage: "Read the run output and its exit code", doc: docs/src/content/docs/reference/output-and-exit-codes.mdx, exists: false, note: "[GAP]" }
-  - { stage: "Land the CI step", doc: docs/src/content/docs/ci/index.mdx, exists: partial, note: "[GAP] section-index stub only; needs the GitHub Actions recipe" }
+  - { stage: "Decide whether this fits", doc: docs/src/content/docs/index.mdx, exists: true }
+  - { stage: "Install and run one eval end to end", doc: docs/src/content/docs/get-started/index.mdx, exists: true }
+  - { stage: "Understand eval, grader, verdict", doc: docs/src/content/docs/get-started/how-docevals-works.mdx, exists: true }
+  - { stage: "Declare evals in page frontmatter", doc: docs/src/content/docs/evals/index.mdx, exists: true }
+  - { stage: "Write an assertion the judge can decide", doc: docs/src/content/docs/evals/write-good-assertions.mdx, exists: true }
+  - { stage: "Add a deterministic check so not everything is judged", doc: docs/src/content/docs/evals/deterministic-checks.mdx, exists: true }
+  - { stage: "Read the run output and its exit code", doc: docs/src/content/docs/reference/output-and-exit-codes.mdx, exists: true }
+  - { stage: "Land the CI step", doc: docs/src/content/docs/ci/index.mdx, exists: true }
 ---
 
 # CUJ: Stand up your first eval gate
@@ -49,6 +49,4 @@ reader who leaves this journey believing docevals means "an LLM grades my docs" 
 thing and will lose the cost and explicability arguments internally. The grader hierarchy — code
 first, judge second, human last — has to be experienced in the first run, not merely described.
 
-**Current friction / gap.** Everything. This is greenfield: the README is the only surface, and it
-presents features rather than a path. Eight steps, eight gaps — three of them section-index stubs that
-exist only so the site builds.
+**Status.** All 8 steps are served by written pages (8 distinct). Re-check this when the journey changes: a step whose `doc` no longer resolves, or a new step with no page behind it, is the signal that this journey has drifted ahead of the docs.

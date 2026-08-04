@@ -9,13 +9,13 @@ success_criteria: >
   One section is gated at error severity, the rest reports at warning, every increment merged green,
   and no assertion was weakened to get there.
 steps:
-  - { stage: "Decide what should not be evaluated at all", doc: docs/src/content/docs/adopt/retrofit-a-legacy-corpus.mdx, exists: false, note: "[GAP] files.exclude and page-level skip as legitimate triage" }
-  - { stage: "Propose evals one directory at a time", doc: docs/src/content/docs/adopt/index.mdx, exists: partial, note: "[GAP] section-index stub only; batching keeps the review reviewable" }
-  - { stage: "Enter at warning severity so nothing fails yet", doc: docs/src/content/docs/evals/severity-and-findings.mdx, exists: false, note: "[GAP] the inversion: lower severity, never weaken the assertion" }
-  - { stage: "Use a capability suite with a target below 1.0", doc: docs/src/content/docs/evals/regression-vs-capability.mdx, exists: false, note: "[GAP]" }
-  - { stage: "Burn down the findings for one section", doc: docs/src/content/docs/fix/index.mdx, exists: partial, note: "[GAP] section-index stub only" }
-  - { stage: "Ratchet that section up to error severity", doc: docs/src/content/docs/adopt/retrofit-a-legacy-corpus.mdx, exists: false, note: "[GAP]" }
-  - { stage: "Make the surviving evals cheap to keep running", doc: docs/src/content/docs/adopt/promote-to-deterministic.mdx, exists: false, note: "[GAP]" }
+  - { stage: "Decide what should not be evaluated at all", doc: docs/src/content/docs/adopt/retrofit-a-legacy-corpus.mdx, exists: true }
+  - { stage: "Propose evals one directory at a time", doc: docs/src/content/docs/adopt/index.mdx, exists: true }
+  - { stage: "Enter at warning severity so nothing fails yet", doc: docs/src/content/docs/evals/severity-and-findings.mdx, exists: true }
+  - { stage: "Use a capability suite with a target below 1.0", doc: docs/src/content/docs/evals/regression-vs-capability.mdx, exists: true }
+  - { stage: "Burn down the findings for one section", doc: docs/src/content/docs/fix/index.mdx, exists: true }
+  - { stage: "Ratchet that section up to error severity", doc: docs/src/content/docs/adopt/retrofit-a-legacy-corpus.mdx, exists: true }
+  - { stage: "Make the surviving evals cheap to keep running", doc: docs/src/content/docs/adopt/promote-to-deterministic.mdx, exists: true }
 ---
 
 # CUJ: Get a legacy corpus onto a ratchet
@@ -54,6 +54,4 @@ than its first run.
 [Iris](../personas/iris-retrofitter.md) owns this journey; [Priya](../personas/priya-corpus-owner.md)
 walks it whenever her corpus predates her adoption, which is most of the time.
 
-**Current friction / gap.** Seven steps, seven gaps. `adopt/retrofit-a-legacy-corpus.mdx` carries the
-inversion and is the highest-consequence page in the `adopt/` section — getting it wrong does not slow
-an adoption down, it ends one.
+**Status.** All 7 steps are served by written pages (6 distinct). Re-check this when the journey changes: a step whose `doc` no longer resolves, or a new step with no page behind it, is the signal that this journey has drifted ahead of the docs.

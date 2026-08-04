@@ -1,32 +1,31 @@
 ---
 title: Reference
-description: Lookup shelf — commands, config keys, frontmatter fields, graders, and output formats.
+description: Lookup shelf — commands, config keys, frontmatter fields, graders, output formats, and state.
 ---
 
 Exhaustive detail the journey sections link into. Everything here is verified against the source and
-the test suite rather than described from memory.
+the test suite rather than described from memory — flag tables against `src/cli.ts`, config keys
+against `src/core/config-schema.json`, output samples captured from real runs.
 
-This section is planned and not yet written. It will cover:
+| Page | Covers |
+|---|---|
+| [CLI](/docevals/reference/cli/) | All eight commands, every flag, and the exit code each produces. |
+| [Configuration](/docevals/reference/configuration/) | Every `docevals.config.yaml` key, its type, and its default. |
+| [Frontmatter](/docevals/reference/frontmatter/) | Every eval field, the three entry forms, and how page evals resolve against config evals and suites. |
+| [Graders](/docevals/reference/graders/) | Every grader kind and its options, including the ones with sharp edges. |
+| [Output and exit codes](/docevals/reference/output-and-exit-codes/) | The `human`, `json`, `markdown`, and `github` shapes; what `0`/`1`/`2` mean and who each routes to. |
+| [Files and state](/docevals/reference/files-and-state/) | What docevals writes, where, and which of it belongs in version control. |
+| [Glossary](/docevals/reference/glossary/) | The terms that recur across every section. |
 
-- **CLI** — every command and flag
-- **Configuration** — every `docevals.config.yaml` key, its type, and its default
-- **Frontmatter** — every eval field, and how page evals resolve against config evals and suites
-- **Graders** — every grader kind and its options
-- **Output and exit codes** — the `human`, `json`, `markdown`, and `github` formats
-- **Files and state** — what docevals writes, and where
-- **Glossary**
+## If you are looking for
 
-Until then, `docevals --help` and the [README](https://github.com/hawkeyexl/docevals#readme) are the
-reference.
+- **why a build went red** → [Fix a failing eval](/docevals/fix/)
+- **what a flag does** → [CLI](/docevals/reference/cli/)
+- **what a config key defaults to** → [Configuration](/docevals/reference/configuration/)
+- **which grader to reach for** → [Graders](/docevals/reference/graders/), or
+  [Deterministic checks](/docevals/evals/deterministic-checks/) for the reasoning
+- **whether to commit a file docevals wrote** → [Files and state](/docevals/reference/files-and-state/)
 
-{/* The commands above are executed by the tool:doc-detective grader during
-    `docevals run` over this site (see .github/workflows/ci.yml `verify-docs`),
-    against the committed fixture corpus. Config: .doc-detective.json. */}
-
-{/* step {"description":"`docevals --help` lists the commands this shelf documents.","runShell":{"command":"npx docevals --help","exitCodes":[0],"stdout":"/run.*list.*generate/s"}} */}
-
-{/* step {"description":"An all-passing run exits 0.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/find.mdx --deterministic-only --no-generate","exitCodes":[0]}} */}
-
-{/* step {"description":"A failing eval exits 1, distinct from an operational error.","runShell":{"command":"npx docevals run test/fixtures/pages/docs/actions/goTo.mdx --deterministic-only --no-generate","exitCodes":[1]}} */}
-
-{/* step {"description":"A missing config is an operational error: exit 2, distinct from a finding.","runShell":{"command":"npx docevals run -c does-not-exist.yaml","exitCodes":[2]}} */}
+This shelf supports navigation; it does not drive it. If you are trying to accomplish something
+rather than look something up, start from a section in the sidebar — the journey pages explain the
+path and link here for detail.

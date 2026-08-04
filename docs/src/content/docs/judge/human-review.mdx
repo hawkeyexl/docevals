@@ -1,0 +1,100 @@
+---
+title: Human review
+description: Clear the review queue, make verdicts persist, and know when a repeat offender is telling you something.
+---
+
+The human-review zone is where the judge routes what it is not confident about. That is the design
+working — but it only works if someone clears the queue.
+
+A queue nobody knows how to clear becomes a queue nobody clears, and the team's response is to turn
+the zone off.
+
+## See what is waiting
+
+```bash
+npx docevals review
+```
+
+With no arguments, `review` lists the evals awaiting a verdict. You do not need to hunt through a
+report — this surprises people, so it is worth knowing on day one.
+
+## Record a verdict
+
+```bash
+npx docevals review docs/install.md explains-why-before-how pass \
+  --reviewer priya \
+  --note "Motivation is in the intro paragraph, not a heading."
+```
+
+Verdict is `pass` or `fail`. `--reviewer` and `--note` are optional and worth using — the note is
+what stops the next person re-litigating the same borderline case.
+
+## Verdicts persist, and expire on their own
+
+Reviews land in `.docevals/reviews.yaml`:
+
+```yaml
+- file: docs/install.md
+  evalName: explains-why-before-how
+  contentHash: 9f2b1c…
+  verdict: pass
+  reviewer: priya
+  date: 2026-08-03
+  note: Motivation is in the intro paragraph, not a heading.
+```
+
+Two properties make this safe:
+
+**It persists.** An unchanged page stays resolved. Review is not a per-run tax.
+
+**It self-invalidates.** `contentHash` is a hash of the **page body** at review time. When the page
+changes, the review is silently ignored and the eval returns to needs-review.
+
+That second property is what makes the first one safe. Without it, persistence would be a way to
+accumulate stale approvals — a page reviewed once in 2024 passing forever regardless of what happened
+to it since.
+
+Commit `reviews.yaml`. It is team state, not a cache — see
+[Files and state](/docevals/reference/files-and-state/).
+
+## Should review block the build?
+
+`--fail-on-review` makes evals in the review zone exit 1.
+
+| | With the flag | Without |
+|---|---|---|
+| The queue | Never ignored | Can rot |
+| Pull requests | Sometimes wait on a person | Keep moving |
+| Requires | Someone who owns the queue | — |
+
+There is no universally right answer, and the deciding question is not about the docs — it is
+**whether anyone owns the queue**. If nobody does, blocking on it converts a rotting queue into
+blocked contributors, which is worse.
+
+A middle path that works: don't block on pull requests, and run with `--fail-on-review` on a schedule
+so the queue is visible without holding anyone up.
+
+## Contributors cannot clear it themselves
+
+Someone whose pull request is blocked by a needs-review eval usually has no standing to resolve it.
+Escalating is the correct outcome for them — see [Fix a failing eval](/docevals/fix/). Make sure your
+contributing guide names who to escalate to; "ask someone" is how these sit for a week.
+
+## A repeat offender is a diagnosis
+
+**An eval that lands in review on every single run is telling you its assertion is ambiguous.**
+
+Answering it faster forever is the wrong response. The repair is in
+[Write good assertions](/docevals/evals/write-good-assertions/) — usually adding `evidence` to scope
+what the judge looks at, or an `examples.fail` that writes down the boundary being disputed.
+
+If you are unsure whether a rewrite helped, add the case to your golden set and
+[calibrate](/docevals/judge/calibrate/). That converts "it feels better" into a measurement.
+
+## Tuning how much lands here
+
+`judge.zones.autoPass` and `judge.zones.autoFail` (both default `0.8`) control the width of the
+review band. Raising them sends more to people; lowering them sends more to automation.
+
+Change them with calibration data rather than by feel — a narrower band with a rising false-positive
+rate is a worse gate, not a faster one.
