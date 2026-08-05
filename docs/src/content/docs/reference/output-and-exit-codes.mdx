@@ -20,6 +20,30 @@ earns the check a reputation for flakiness it does not deserve.
 
 `--fail-on-review` additionally makes exit 1 cover evals sitting in the human-review zone.
 
+## Which formats each command accepts
+
+`-f/--format` is not one shared set. `run` has four reporters; `list` and `fill` render only two.
+
+| Command | Accepted formats |
+|---|---|
+| `run` | `human`, `json`, `markdown`, `github` |
+| `list` | `human`, `json` |
+| `fill` | `human`, `json` |
+
+Anything else is a **usage error: exit 2**, with the allowed set in the message. Matching is exact —
+`JSON` and `Json` are rejected rather than folded, so a typo surfaces instead of being guessed at.
+Passing `run`'s `markdown` to `list` is rejected for the same reason.
+
+```console
+$ docevals list docs/ --format xml
+docevals: --format must be one of human | json, got "xml"
+$ echo $?
+2
+```
+
+That matters most in CI, where `--format json` is piped into a parser. Exit 2 stops the pipeline;
+silently falling back to the human report would hand `jq` ANSI colour codes and still exit 0.
+
 ## `--format human`
 
 The default. Per page, one line per eval; then per-suite aggregates.

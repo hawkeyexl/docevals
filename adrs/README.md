@@ -20,6 +20,7 @@ Every **behavior change** in docevals ships with an ADR here. The ADR records th
 | [01004](01004-test-the-docs-through-docevals-itself.md) | Test the docs site through docevals itself, with committed cache fixtures | accepted |
 | [01005](01005-fix-the-doc-detective-adapter-invocation-and-finding-granularity.md) | Fix the Doc Detective adapter: invocation, failure detection, and finding granularity | accepted |
 | [01006](01006-publish-the-docs-site-to-github-pages.md) | Publish the docs site to GitHub Pages, gated on docevals evaluating itself | accepted |
+| [01007](01007-validate-format-centrally-as-a-usage-error.md) | Validate `--format` centrally, and reject an unknown value as a usage error | accepted |
 
 ## To backfill
 

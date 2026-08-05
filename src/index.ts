@@ -40,8 +40,13 @@ export {
   type InferenceProvider,
   type MockResponse,
 } from "@hawkeyexl/inference";
-export { render } from "./reporters/index.js";
-export type { ReportFormat } from "./reporters/index.js";
+export {
+  render,
+  parseFormat,
+  REPORT_FORMATS,
+  SUMMARY_FORMATS,
+} from "./reporters/index.js";
+export type { ReportFormat, SummaryFormat } from "./reporters/index.js";
 export {
   listReviews,
   renderReviews,
